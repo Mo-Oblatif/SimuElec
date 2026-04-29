@@ -1,0 +1,136 @@
+.properties-panel {
+  width: 320px;
+  background-color: var(--color-surface);
+  border-left: 1px solid var(--color-border);
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.properties-panel h3 {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--color-text);
+}
+
+.properties-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--color-text-secondary);
+  font-size: 14px;
+  text-align: center;
+  padding: 20px;
+}
+
+.property-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.property-label {
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--color-text-secondary);
+}
+
+.property-value {
+  font-size: 14px;
+  padding: 8px 12px;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+}
+
+.property-code {
+  font-family: 'Courier New', monospace;
+  font-size: 12px;
+  word-break: break-all;
+}
+
+.property-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.property-grid small {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+  display: block;
+  margin-bottom: 4px;
+}
+
+.property-grid input {
+  width: 100%;
+  padding: 6px 8px;
+  font-size: 12px;
+}
+
+.terminals-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.terminal-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 8px;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 3px;
+  font-size: 12px;
+}
+
+.terminal-id {
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.terminal-type {
+  color: var(--color-text-secondary);
+  font-size: 11px;
+}
+
+.btn-delete {
+  background-color: var(--color-danger);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-weight: 500;
+  font-size: 14px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn-delete:hover {
+  background-color: #dc2626;
+  transform: translateY(-1px);
+}
+
+/* Scrollbar */
+.properties-panel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.properties-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.properties-panel::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+.properties-panel::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
+}
