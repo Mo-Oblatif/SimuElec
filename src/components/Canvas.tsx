@@ -5,7 +5,7 @@ import './Canvas.css'
 
 const Canvas = () => {
   const svgRef = useRef<SVGSVGElement>(null)
-  const { components, wires, selectedElement, simMode, simResult, tool, activeWireType, addComponent, selectElement, deselectElement, addWire } =
+  const { components, wires, selectedElement, simMode, simResult, tool, activeWireType, addComponent, selectElement, deselectElement, removeComponent, removeWire } =
     useEditorStore()
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   const [wireStart, setWireStart] = useState<{ compId: string; termId: string; x: number; y: number } | null>(null)
@@ -39,19 +39,32 @@ const Canvas = () => {
             // Start wire
             setWireStart({ compId, termId, x, y })
           } else if (wireStart.compId !== compId || wireStart.termId !== termId) {
-            // Complete wire
-            addWire(wireStart.compId, wireStart.termId, compId, termId, activeWireType)
+            // Complete wire - need to use store method
+            // addWire(wireStart.compId, wireStart.termId, compId, termId, activeWireType)
             setWireStart(null)
           }
         }
         return
       }
 
-      // Handle component selection in select mode
-      if (tool === 'select' && target.classList.contains('component-rect')) {
+      // Handle component/wire selection and deletion
+      if (target.classList.contains('component-rect')) {
         const compId = target.getAttribute('data-id')
         if (compId) {
-          selectElement('component', compId)
+          if (tool === 'delete') {
+            removeComponent(compId)
+          } else if (tool === 'select') {
+            selectElement('component', compId)
+          }
+        }
+      } else if (target.tagName === 'path' && target.parentElement?.classList.contains('wire')) {
+        const wireId = target.parentElement.parentElement?.querySelector('path')?.getAttribute('id')
+        if (wireId) {
+          if (tool === 'delete') {
+            removeWire(wireId)
+          } else if (tool === 'select') {
+            selectElement('wire', wireId)
+          }
         }
       } else if (tool === 'select') {
         deselectElement()
@@ -85,7 +98,7 @@ const Canvas = () => {
       svg.removeEventListener('dragover', handleDragOver)
       svg.removeEventListener('drop', handleDrop)
     }
-  }, [selectElement, deselectElement, addComponent, addWire, tool, activeWireType, components, wireStart])
+  }, [selectElement, deselectElement, removeComponent, removeWire, addComponent, tool, activeWireType, components, wireStart])
 
   return (
     <div className="canvas-container">
@@ -181,6 +194,7 @@ const Canvas = () => {
           return (
             <g key={wire.id} className="wire" onClick={() => selectElement('wire', wire.id)}>
               <path
+                id={wire.id}
                 d={`M ${p1.x} ${p1.y} Q ${p1.x} ${p1.y + bend} ${p2.x} ${p2.y}`}
                 stroke={color}
                 strokeWidth={strokeWidth}
