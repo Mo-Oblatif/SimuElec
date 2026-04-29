@@ -33,14 +33,34 @@ const Canvas = () => {
       }
     }
 
+    const handleDragOver = (e: DragEvent) => {
+      e.preventDefault()
+      e.dataTransfer!.dropEffect = 'copy'
+    }
+
+    const handleDrop = (e: DragEvent) => {
+      e.preventDefault()
+      const componentType = e.dataTransfer?.getData('componentType')
+      if (componentType) {
+        const rect = svg.getBoundingClientRect()
+        const x = e.clientX - rect.left
+        const y = e.clientY - rect.top
+        addComponent(componentType, x, y)
+      }
+    }
+
     svg.addEventListener('mousemove', handleMouseMove)
     svg.addEventListener('click', handleClick)
+    svg.addEventListener('dragover', handleDragOver)
+    svg.addEventListener('drop', handleDrop)
 
     return () => {
       svg.removeEventListener('mousemove', handleMouseMove)
       svg.removeEventListener('click', handleClick)
+      svg.removeEventListener('dragover', handleDragOver)
+      svg.removeEventListener('drop', handleDrop)
     }
-  }, [selectElement, deselectElement])
+  }, [selectElement, deselectElement, addComponent])
 
   return (
     <div className="canvas-container">
@@ -67,6 +87,13 @@ const Canvas = () => {
           </filter>
           <filter id="glow-terre">
             <feGaussianBlur stdDeviation="3" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+          <filter id="glow-energized">
+            <feGaussianBlur stdDeviation="4" result="coloredBlur" />
             <feMerge>
               <feMergeNode in="coloredBlur" />
               <feMergeNode in="SourceGraphic" />
@@ -122,16 +149,20 @@ const Canvas = () => {
           }
 
           const color = wireColors[wire.type] || '#888'
+          const isEnergized = simMode && simResult && simResult.energizedWires.has(wire.id)
+          const strokeWidth = selectedElement?.id === wire.id ? 4 : isEnergized ? 3 : 2
+          const filterId = isEnergized ? `glow-${wire.type}` : undefined
 
           return (
             <g key={wire.id} className="wire" onClick={() => selectElement('wire', wire.id)}>
               <path
                 d={`M ${p1.x} ${p1.y} Q ${p1.x} ${p1.y + bend} ${p2.x} ${p2.y}`}
                 stroke={color}
-                strokeWidth={selectedElement?.id === wire.id ? 4 : 2}
+                strokeWidth={strokeWidth}
                 fill="none"
                 strokeLinecap="round"
                 cursor="pointer"
+                filter={filterId}
               />
               {selectedElement?.id === wire.id && (
                 <path
@@ -153,6 +184,11 @@ const Canvas = () => {
           if (!def) return null
 
           const isSelected = selectedElement?.id === compId
+          const isEnergized = simMode && simResult && simResult.energizedComps.has(compId)
+          const bgColor = isEnergized ? '#4a7c59' : '#2d3561'
+          const borderColor = isSelected ? '#60a5fa' : isEnergized ? '#10b981' : '#4a5490'
+          const borderWidth = isSelected ? 3 : 2
+          const filter = isEnergized ? 'url(#glow-energized)' : undefined
 
           return (
             <g key={compId} transform={`translate(${comp.x}, ${comp.y})`}>
@@ -162,11 +198,12 @@ const Canvas = () => {
                 data-id={compId}
                 width={def.w}
                 height={def.h}
-                fill="#2d3561"
-                stroke={isSelected ? '#60a5fa' : '#4a5490'}
-                strokeWidth={isSelected ? 3 : 1}
+                fill={bgColor}
+                stroke={borderColor}
+                strokeWidth={borderWidth}
                 rx="2"
                 cursor="pointer"
+                filter={filter}
               />
 
               {/* Terminals */}
@@ -187,7 +224,7 @@ const Canvas = () => {
                 x={def.w / 2}
                 y={def.h / 2 + 4}
                 textAnchor="middle"
-                fill="#f1f5f9"
+                fill={isEnergized ? '#d1fae5' : '#f1f5f9'}
                 fontSize="10"
                 fontWeight="500"
               >
