@@ -5,9 +5,10 @@ import './Canvas.css'
 
 const Canvas = () => {
   const svgRef = useRef<SVGSVGElement>(null)
-  const { components, wires, selectedElement, simMode, simResult, addComponent, selectElement, deselectElement } =
+  const { components, wires, selectedElement, simMode, simResult, tool, activeWireType, addComponent, selectElement, deselectElement, addWire } =
     useEditorStore()
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  const [wireStart, setWireStart] = useState<{ compId: string; termId: string; x: number; y: number } | null>(null)
 
   useEffect(() => {
     const svg = svgRef.current
@@ -23,12 +24,36 @@ const Canvas = () => {
 
     const handleClick = (e: MouseEvent) => {
       const target = e.target as SVGElement
-      if (target.classList.contains('component-rect')) {
+      
+      // Handle terminal clicks in wire mode
+      if (tool === 'wire' && target.tagName === 'circle') {
+        const termId = target.getAttribute('data-terminal')
+        const compId = target.getAttribute('data-comp-id')
+        
+        if (termId && compId) {
+          const rect = svg!.getBoundingClientRect()
+          const x = e.clientX - rect.left
+          const y = e.clientY - rect.top
+
+          if (!wireStart) {
+            // Start wire
+            setWireStart({ compId, termId, x, y })
+          } else if (wireStart.compId !== compId || wireStart.termId !== termId) {
+            // Complete wire
+            addWire(wireStart.compId, wireStart.termId, compId, termId, activeWireType)
+            setWireStart(null)
+          }
+        }
+        return
+      }
+
+      // Handle component selection in select mode
+      if (tool === 'select' && target.classList.contains('component-rect')) {
         const compId = target.getAttribute('data-id')
         if (compId) {
           selectElement('component', compId)
         }
-      } else {
+      } else if (tool === 'select') {
         deselectElement()
       }
     }
@@ -60,7 +85,7 @@ const Canvas = () => {
       svg.removeEventListener('dragover', handleDragOver)
       svg.removeEventListener('drop', handleDrop)
     }
-  }, [selectElement, deselectElement, addComponent])
+  }, [selectElement, deselectElement, addComponent, addWire, tool, activeWireType, components, wireStart])
 
   return (
     <div className="canvas-container">
@@ -207,15 +232,18 @@ const Canvas = () => {
               />
 
               {/* Terminals */}
-              {def.terminals.map((term) => (
+              {def.terminals.map((term, idx) => (
                 <circle
                   key={term.id}
+                  data-terminal={term.id}
+                  data-comp-id={compId}
                   cx={(term.rx ?? 0.5) * def.w}
                   cy={(term.ry ?? 0.5) * def.h}
                   r="4"
                   fill="#cbd5e1"
                   stroke="#1e293b"
                   strokeWidth="1"
+                  cursor={tool === 'wire' ? 'crosshair' : 'default'}
                 />
               ))}
 
@@ -233,6 +261,21 @@ const Canvas = () => {
             </g>
           )
         })}
+
+        {/* Wire preview while drawing */}
+        {wireStart && tool === 'wire' && (
+          <line
+            x1={wireStart.x}
+            y1={wireStart.y}
+            x2={mousePos.x}
+            y2={mousePos.y}
+            stroke="#e67e22"
+            strokeWidth="2"
+            strokeDasharray="5,5"
+            opacity="0.7"
+            pointerEvents="none"
+          />
+        )}
 
         {/* Coordinates display */}
         <text x="10" y="25" fill="#94a3b8" fontSize="12" fontFamily="monospace">
