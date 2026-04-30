@@ -3,6 +3,10 @@
  * Types TypeScript pour le store Zustand
  */
 
+export type WireType =
+  | 'phase' | 'neutre' | 'terre' | 'signal'
+  | 'marron' | 'gris' | 'noir' | 'violet' | 'orange' | 'blanc'
+
 export interface Component {
   id: string
   typeId: string
@@ -10,7 +14,10 @@ export interface Component {
   y: number
   state: string
   label: string
+  scale?: number
 }
+
+export type CableSection = '3G1.5' | '3G2.5' | '3G6' | '5G1.5' | '5G2.5'
 
 export interface Wire {
   id: string
@@ -18,7 +25,8 @@ export interface Wire {
   fromTermId: string
   toCompId: string
   toTermId: string
-  type: 'phase' | 'neutre' | 'terre' | 'signal'
+  type: WireType
+  section?: CableSection
 }
 
 export interface SimulationResult {
@@ -49,12 +57,12 @@ export interface EditorState {
   components: Map<string, Component>
   wires: Wire[]
   selectedElement: { type: 'component' | 'wire'; id: string } | null
-  
+
   // ---- Actions composants ----
   addComponent: (typeId: string, x: number, y: number) => void
   updateComponent: (id: string, updates: Partial<Component>) => void
   removeComponent: (id: string) => void
-  
+
   // ---- Actions fils ----
   addWire: (
     fromCompId: string,
@@ -64,39 +72,46 @@ export interface EditorState {
     wireType?: string
   ) => void
   removeWire: (wireId: string) => void
-  
+  updateWire: (wireId: string, updates: { type?: WireType; section?: CableSection }) => void
+
   // ---- Sélection ----
   selectElement: (type: 'component' | 'wire', id: string) => void
   deselectElement: () => void
-  
+
   // ---- Simulation ----
   simResult: SimulationResult | null
   simMode: boolean
   runSimulation: () => void
   exitSimMode: () => void
-  
+
   // ---- Undo/Redo ----
   history: Array<{ components: Map<string, Component>; wires: Wire[] }>
   historyIndex: number
   saveToHistory: () => void
   undo: () => void
   redo: () => void
-  
+
   // ---- Mode UI ----
   tool: 'select' | 'wire' | 'delete'
-  activeWireType: 'phase' | 'neutre' | 'terre' | 'signal'
-  mode: 'sandbox' | 'training'
+  activeWireType: WireType
+  lastScale: number
+  setLastScale: (scale: number) => void
+  mode: 'sandbox' | 'plan' | 'training'
   setTool: (tool: 'select' | 'wire' | 'delete') => void
-  setActiveWireType: (type: 'phase' | 'neutre' | 'terre' | 'signal') => void
-  setMode: (mode: 'sandbox' | 'training') => void
-  
+  setActiveWireType: (type: WireType) => void
+  setMode: (mode: 'sandbox' | 'plan' | 'training') => void
+  // Workspaces séparés schema / plan
+  _schemaSnapshot: { components: Map<string, Component>; wires: Wire[] } | null
+  _planComponents: Map<string, Component>
+  _planWires: Wire[]
+
   // ---- Viewport ----
   zoom: number
   panX: number
   panY: number
   setZoom: (zoom: number) => void
   setPan: (x: number, y: number) => void
-  
+
   // ---- Notifications ----
   notifications: Notification[]
   addNotification: (
@@ -105,7 +120,19 @@ export interface EditorState {
     duration?: number
   ) => void
   removeNotification: (id: string) => void
-  
+
+  // ---- Exercices ----
+  exerciseIndex: number
+  exerciseScore: number
+  exerciseFeedback: Array<{ msg: string; ok: boolean }> | null
+  showExerciseSelector: boolean
+  startExercise: (index: number) => void
+  validateExercise: () => void
+  nextExercise: () => void
+  exitTraining: () => void
+  openExerciseSelector: () => void
+  closeExerciseSelector: () => void
+
   // ---- Export/Import ----
   exportJSON: () => { components: Component[]; wires: Wire[] }
   importJSON: (data: { components: Component[]; wires: Wire[] }) => void

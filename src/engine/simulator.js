@@ -4,10 +4,8 @@
  * Utilise le Graph pour propager l'alimentation
  */
 
-'use strict';
-
-const Graph = require('./graph');
-const { COMPONENT_DEFINITIONS } = require('./types');
+import Graph from './graph';
+import { COMPONENT_DEFINITIONS } from './types';
 
 class SimulationEngine {
   /**
@@ -368,4 +366,4 @@ class SimulationEngine {
   }
 }
 
-module.exports = SimulationEngine;
+export default SimulationEngine;

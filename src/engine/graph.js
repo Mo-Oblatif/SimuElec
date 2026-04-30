@@ -4,8 +4,6 @@
  * Format: nodes = composants, edges = fils
  */
 
-'use strict';
-
 class Graph {
   constructor() {
     // Map<nodeId, Set<edgeId>>
@@ -219,4 +217,4 @@ class Graph {
   }
 }
 
-module.exports = Graph;
+export default Graph;
