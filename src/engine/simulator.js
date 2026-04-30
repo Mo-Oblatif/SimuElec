@@ -4,10 +4,8 @@
  * Utilise le Graph pour propager l'alimentation
  */
 
-'use strict';
-
-const Graph = require('./graph');
-const { COMPONENT_DEFINITIONS } = require('./types');
+import Graph from './graph';
+import { COMPONENT_DEFINITIONS } from './types';
 
 class SimulationEngine {
   /**
@@ -75,9 +73,10 @@ class SimulationEngine {
     }
 
     // Propager l'alimentation
-    const phaseNodes = new Set(phaseSources);
-    const neutreNodes = new Set(neutreSources);
-    const terreNodes = new Set(terreSources);
+    // Filtrer les sources pour ne garder que celles qui existent dans le graphe
+    const phaseNodes = new Set(phaseSources.filter(nodeId => graph.nodes.has(nodeId)));
+    const neutreNodes = new Set(neutreSources.filter(nodeId => graph.nodes.has(nodeId)));
+    const terreNodes = new Set(terreSources.filter(nodeId => graph.nodes.has(nodeId)));
 
     this._propagate(graph, phaseNodes, 'phase');
     this._propagate(graph, neutreNodes, 'neutre');
@@ -283,8 +282,9 @@ class SimulationEngine {
 
     const energized = graph.bfs(sourceNodes, shouldTraverse);
 
-    // Marquer les composants énergisés
+    // IMPORTANT: Mettre à jour l'ensemble source avec tous les nœuds énergisés
     for (const nodeId of energized) {
+      sourceNodes.add(nodeId);
       this.result.energizedNodes.add(nodeId);
       const [compId] = nodeId.split(':');
       this.result.energizedComps.add(compId);
@@ -366,4 +366,4 @@ class SimulationEngine {
   }
 }
 
-module.exports = SimulationEngine;
+export default SimulationEngine;

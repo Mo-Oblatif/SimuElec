@@ -1,87 +1,86 @@
 /**
  * src/engine/types.js
  * Types fondamentaux du moteur de simulation (logique pure)
- * Aucune dépendance à React, Canvas ou UI
  */
-
-// ============================================================
-// TYPES DE DONNÉES GÉNÉRIQUES
-// ============================================================
-
-/**
- * Un nœud du graphe (terminal d'un composant)
- * @typedef {Object} GraphNode
- * @property {string} id - 'componentId:terminalId'
- * @property {string} componentId
- * @property {string} terminalId
- * @property {string} type - 'phase_in' | 'phase_out' | 'neutre_in' | 'neutre_out' | 'terre' | 'signal_in' | 'signal_out' | 'any'
- */
-
-/**
- * Une arête du graphe (fil électrique)
- * @typedef {Object} GraphEdge
- * @property {string} id
- * @property {string} fromNodeId - 'componentId:terminalId'
- * @property {string} toNodeId - 'componentId:terminalId'
- * @property {string} type - 'phase' | 'neutre' | 'terre' | 'signal'
- */
-
-/**
- * Un composant électrique dans le circuit
- * @typedef {Object} ComponentData
- * @property {string} id
- * @property {string} typeId - 'disjoncteur16', 'lampe', etc.
- * @property {number} x - Position X en canvas
- * @property {number} y - Position Y en canvas
- * @property {string} state - 'closed' | 'open' | 'tripped' | etc.
- * @property {string} label - Étiquette personnalisée
- */
-
-/**
- * Résultat d'une simulation
- * @typedef {Object} SimulationResult
- * @property {Set<string>} energizedNodes - Set de 'componentId:terminalId'
- * @property {Set<string>} energizedComps - Set de componentIds
- * @property {Array<Object>} loads - [{componentId, phaseEnergized, neutreEnergized}]
- * @property {Array<Object>} errors - [{type, message, severity}]
- * @property {Array<Object>} warnings - [{type, message, severity}]
- */
-
-// ============================================================
-// COULEURS ÉLECTRIQUES
-// ============================================================
 
 const WIRE_COLORS = {
-  phase: '#c0392b',
+  phase:  '#c0392b',
   neutre: '#2980b9',
-  terre: '#27ae60',
+  terre:  '#27ae60',
   signal: '#e67e22',
+  marron: '#92400e',
+  gris:   '#6b7280',
+  noir:   '#475569',
+  violet: '#7c3aed',
+  orange: '#ea580c',
+  blanc:  '#e2e8f0',
 };
 
 const WIRE_COLORS_GLOW = {
-  phase: '#ff6b6b',
+  phase:  '#ff6b6b',
   neutre: '#74b9ff',
-  terre: '#55efc4',
+  terre:  '#55efc4',
   signal: '#fd9644',
+  marron: '#d97706',
+  gris:   '#9ca3af',
+  noir:   '#6b7280',
+  violet: '#a78bfa',
+  orange: '#fb923c',
+  blanc:  '#f8fafc',
 };
 
-// ============================================================
-// DÉFINITIONS DE COMPOSANTS (extraites de data.js)
-// ============================================================
-
 const COMPONENT_DEFINITIONS = {
-  // Protections
+
+  // ============================================================
+  // ARMOIRE / TABLEAU (schema only — élément de fond)
+  // ============================================================
+  agcp: {
+    label: 'AGCP (Branchement)',
+    category: 'cabinet',
+    showInMode: 'schema',
+    w: 56, h: 120,
+    amperage: 60,
+    states: ['closed', 'open', 'tripped'],
+    defaultState: 'closed',
+    terminals: [
+      { id: 'ph_in',  type: 'phase_in',   side: 'top' },
+      { id: 'n_in',   type: 'neutre_in',  side: 'top' },
+      { id: 'ph_out', type: 'phase_out',  side: 'bottom' },
+      { id: 'n_out',  type: 'neutre_out', side: 'bottom' },
+    ],
+    electricLogic: 'agcp',
+  },
+
+  tableau_armoire: {
+    label: 'Armoire tableau',
+    category: 'cabinet',
+    showInMode: 'schema',
+    w: 480, h: 640,
+    states: ['fixed'],
+    defaultState: 'fixed',
+    terminals: [
+      { id: 'ph_in', type: 'phase_in',  side: 'top' },
+      { id: 'n_in',  type: 'neutre_in', side: 'top' },
+      { id: 'pe_in', type: 'terre',     side: 'top' },
+    ],
+    electricLogic: 'cabinet',
+  },
+
+  // ============================================================
+  // PROTECTIONS (schema + training)
+  // ============================================================
   disjoncteur16: {
     label: 'Disjoncteur 16A',
     category: 'protection',
-    w: 18,
-    h: 72,
+    w: 56, h: 100,
     amperage: 16,
     states: ['closed', 'open', 'tripped'],
     defaultState: 'closed',
     terminals: [
-      { id: 't_in', type: 'phase_in', side: 'top' },
-      { id: 't_out', type: 'phase_out', side: 'bottom' },
+      { id: 'ph_in',  type: 'phase_in',   side: 'top' },
+      { id: 'n_in',   type: 'neutre_in',  side: 'top' },
+      { id: 'ph_out', type: 'phase_out',  side: 'bottom' },
+      { id: 'n_out',  type: 'neutre_out', side: 'bottom' },
     ],
     electricLogic: 'breaker',
   },
@@ -89,14 +88,15 @@ const COMPONENT_DEFINITIONS = {
   disjoncteur20: {
     label: 'Disjoncteur 20A',
     category: 'protection',
-    w: 18,
-    h: 72,
+    w: 56, h: 100,
     amperage: 20,
     states: ['closed', 'open', 'tripped'],
     defaultState: 'closed',
     terminals: [
-      { id: 't_in', type: 'phase_in', side: 'top' },
-      { id: 't_out', type: 'phase_out', side: 'bottom' },
+      { id: 'ph_in',  type: 'phase_in',   side: 'top' },
+      { id: 'n_in',   type: 'neutre_in',  side: 'top' },
+      { id: 'ph_out', type: 'phase_out',  side: 'bottom' },
+      { id: 'n_out',  type: 'neutre_out', side: 'bottom' },
     ],
     electricLogic: 'breaker',
   },
@@ -104,14 +104,15 @@ const COMPONENT_DEFINITIONS = {
   disjoncteur32: {
     label: 'Disjoncteur 32A',
     category: 'protection',
-    w: 18,
-    h: 72,
+    w: 56, h: 100,
     amperage: 32,
     states: ['closed', 'open', 'tripped'],
     defaultState: 'closed',
     terminals: [
-      { id: 't_in', type: 'phase_in', side: 'top' },
-      { id: 't_out', type: 'phase_out', side: 'bottom' },
+      { id: 'ph_in',  type: 'phase_in',   side: 'top' },
+      { id: 'n_in',   type: 'neutre_in',  side: 'top' },
+      { id: 'ph_out', type: 'phase_out',  side: 'bottom' },
+      { id: 'n_out',  type: 'neutre_out', side: 'bottom' },
     ],
     electricLogic: 'breaker',
   },
@@ -119,81 +120,101 @@ const COMPONENT_DEFINITIONS = {
   differentiel: {
     label: 'Interrupteur Différentiel 30mA',
     category: 'protection',
-    w: 36,
-    h: 72,
+    w: 56, h: 100,
     amperage: 40,
     states: ['closed', 'open', 'tripped'],
     defaultState: 'closed',
     terminals: [
-      { id: 'ph_in', type: 'phase_in', side: 'top' },
-      { id: 'ph_out', type: 'phase_out', side: 'bottom' },
-      { id: 'n_in', type: 'neutre_in', side: 'top' },
-      { id: 'n_out', type: 'neutre_out', side: 'bottom' },
+      { id: 'ph_in',  type: 'phase_in',   side: 'top' },
+      { id: 'ph_out', type: 'phase_out',  side: 'bottom' },
+      { id: 'n_in',   type: 'neutre_in',  side: 'top' },
+      { id: 'n_out',  type: 'neutre_out', side: 'bottom' },
     ],
     electricLogic: 'differential',
   },
 
+  // ============================================================
+  // RELAIS (schema + training)
+  // ============================================================
   telerupteur: {
     label: 'Télérupteur',
     category: 'relay',
-    w: 36,
-    h: 72,
+    w: 56, h: 100,
     states: ['closed', 'open'],
     defaultState: 'open',
     terminals: [
-      { id: 'a1', type: 'signal_in', side: 'left' },
-      { id: 'a2', type: 'signal_in', side: 'left' },
+      { id: 'a1', type: 'signal_in',  side: 'left' },
+      { id: 'a2', type: 'signal_in',  side: 'left' },
       { id: '11', type: 'phase_out', side: 'bottom' },
       { id: '14', type: 'phase_out', side: 'bottom' },
     ],
     electricLogic: 'relay',
   },
 
-  // Charges
-  lampe: {
-    label: 'Lampe',
-    category: 'load',
-    w: 20,
-    h: 20,
+  minuteur: {
+    label: 'Minuterie',
+    category: 'relay',
+    showInMode: 'schema',
+    w: 56, h: 100,
+    states: ['off', 'on', 'timing'],
+    defaultState: 'off',
+    terminals: [
+      { id: 'a1', type: 'phase_in',  side: 'top' },
+      { id: 'a2', type: 'neutre_in', side: 'top' },
+      { id: '11', type: 'phase_out', side: 'bottom' },
+      { id: '14', type: 'phase_out', side: 'bottom' },
+    ],
+    electricLogic: 'timer',
+  },
+
+  // ============================================================
+  // COMMANDES schema-only
+  // ============================================================
+  bouton_simple: {
+    label: 'Bouton simple',
+    category: 'control',
+    showInMode: 'plan',
+    w: 40, h: 40,
+    states: ['open', 'closed'],
+    defaultState: 'open',
+    terminals: [
+      { id: 'in',  type: 'phase_in',  side: 'left' },
+      { id: 'out', type: 'phase_out', side: 'right' },
+    ],
+    electricLogic: 'simple_button',
+  },
+
+  thermostat: {
+    label: 'Thermostat',
+    category: 'control',
+    showInMode: 'plan',
+    w: 56, h: 100,
     states: ['off', 'on'],
     defaultState: 'off',
     terminals: [
-      { id: 'ph', type: 'phase_in', side: 'top' },
-      { id: 'n', type: 'neutre_in', side: 'bottom' },
+      { id: 'ph_in',  type: 'phase_in',  side: 'top' },
+      { id: 'ph_out', type: 'phase_out', side: 'bottom' },
+      { id: 'n',      type: 'neutre_in', side: 'right' },
     ],
-    electricLogic: 'lamp',
+    electricLogic: 'thermostat',
   },
 
-  prise: {
-    label: 'Prise',
-    category: 'load',
-    w: 20,
-    h: 20,
-    states: ['off', 'on'],
-    defaultState: 'off',
-    terminals: [
-      { id: 'ph', type: 'phase_in', side: 'top' },
-      { id: 'n', type: 'neutre_in', side: 'bottom' },
-      { id: 'pe', type: 'terre', side: 'right' },
-    ],
-    electricLogic: 'socket',
-  },
-
-  // Borniers/Sources
+  // ============================================================
+  // BORNIERS (schema + training)
+  // ============================================================
   bornier_neutre: {
     label: 'Bornier Neutre',
     category: 'busbar',
-    w: 40,
-    h: 60,
+    w: 60, h: 80,
     states: ['fixed'],
     defaultState: 'fixed',
     terminals: [
       { id: 'n_main', type: 'neutre_source', side: 'left' },
-      { id: 'n1', type: 'neutre_out', side: 'right' },
-      { id: 'n2', type: 'neutre_out', side: 'right' },
-      { id: 'n3', type: 'neutre_out', side: 'right' },
-      { id: 'n4', type: 'neutre_out', side: 'right' },
-      { id: 'n5', type: 'neutre_out', side: 'right' },
+      { id: 'n1',     type: 'neutre_out',    side: 'right' },
+      { id: 'n2',     type: 'neutre_out',    side: 'right' },
+      { id: 'n3',     type: 'neutre_out',    side: 'right' },
+      { id: 'n4',     type: 'neutre_out',    side: 'right' },
+      { id: 'n5',     type: 'neutre_out',    side: 'right' },
     ],
     electricLogic: 'busbar',
   },
@@ -201,38 +222,242 @@ const COMPONENT_DEFINITIONS = {
   bornier_terre: {
     label: 'Bornier Terre',
     category: 'busbar',
-    w: 40,
-    h: 60,
+    w: 60, h: 80,
     states: ['fixed'],
     defaultState: 'fixed',
     terminals: [
       { id: 'pe_main', type: 'terre_source', side: 'left' },
-      { id: 'pe1', type: 'terre', side: 'right' },
-      { id: 'pe2', type: 'terre', side: 'right' },
-      { id: 'pe3', type: 'terre', side: 'right' },
-      { id: 'pe4', type: 'terre', side: 'right' },
-      { id: 'pe5', type: 'terre', side: 'right' },
+      { id: 'pe1',     type: 'terre',        side: 'right' },
+      { id: 'pe2',     type: 'terre',        side: 'right' },
+      { id: 'pe3',     type: 'terre',        side: 'right' },
+      { id: 'pe4',     type: 'terre',        side: 'right' },
+      { id: 'pe5',     type: 'terre',        side: 'right' },
     ],
     electricLogic: 'busbar',
   },
 
+  // ============================================================
+  // CHARGES — plan + training (pas dans le tableau)
+  // ============================================================
+  lampe: {
+    label: 'Lampe',
+    category: 'load',
+    showInMode: 'plan-training',
+    w: 44, h: 44,
+    states: ['off', 'on'],
+    defaultState: 'off',
+    terminals: [
+      { id: 'ph', type: 'phase_in',  side: 'top' },
+      { id: 'n',  type: 'neutre_in', side: 'bottom' },
+    ],
+    electricLogic: 'lamp',
+  },
+
+  prise: {
+    label: 'Prise',
+    category: 'load',
+    showInMode: 'plan-training',
+    w: 44, h: 44,
+    states: ['off', 'on'],
+    defaultState: 'off',
+    terminals: [
+      { id: 'ph', type: 'phase_in',  side: 'top' },
+      { id: 'n',  type: 'neutre_in', side: 'bottom' },
+      { id: 'pe', type: 'terre',     side: 'right' },
+    ],
+    electricLogic: 'socket',
+  },
+
+  // ============================================================
+  // COMMANDES — plan + training
+  // ============================================================
   bouton: {
-    label: 'Bouton',
+    label: 'Bouton poussoir',
     category: 'control',
-    w: 20,
-    h: 20,
+    showInMode: 'plan-training',
+    w: 40, h: 40,
     states: ['unpressed', 'pressed'],
     defaultState: 'unpressed',
     terminals: [
-      { id: 'in', type: 'signal_in', side: 'left' },
+      { id: 'in',  type: 'signal_in',  side: 'left' },
       { id: 'out', type: 'signal_out', side: 'right' },
     ],
     electricLogic: 'pushbutton',
   },
+
+  // ============================================================
+  // COMPOSANTS MODE PLAN
+  // ============================================================
+
+  interrupteur: {
+    label: 'Interrupteur',
+    category: 'control',
+    showInMode: 'plan',
+    w: 48, h: 48,
+    states: ['open', 'closed'],
+    defaultState: 'open',
+    terminals: [
+      { id: 'in',  type: 'phase_in',  side: 'left' },
+      { id: 'out', type: 'phase_out', side: 'right' },
+    ],
+    electricLogic: 'switch',
+  },
+
+  va_et_vient: {
+    label: 'Va-et-vient',
+    category: 'control',
+    showInMode: 'plan',
+    w: 52, h: 52,
+    states: ['pos1', 'pos2'],
+    defaultState: 'pos1',
+    terminals: [
+      { id: 'c',  type: 'phase_in',  side: 'left' },
+      { id: 'v1', type: 'phase_out', side: 'right' },
+      { id: 'v2', type: 'phase_out', side: 'top' },
+    ],
+    electricLogic: 'two_way',
+  },
+
+  interrupteur_double: {
+    label: 'Double interrupteur',
+    category: 'control',
+    showInMode: 'plan',
+    w: 52, h: 44,
+    states: ['both_open', 'first_closed', 'second_closed', 'both_closed'],
+    defaultState: 'both_open',
+    terminals: [
+      { id: 'in',   type: 'phase_in',  side: 'left' },
+      { id: 'out1', type: 'phase_out', side: 'right' },
+      { id: 'out2', type: 'phase_out', side: 'right' },
+    ],
+    electricLogic: 'double_switch',
+  },
+
+  volet_roulant: {
+    label: 'Volet roulant',
+    category: 'control',
+    showInMode: 'plan',
+    w: 52, h: 52,
+    states: ['stopped', 'up', 'down'],
+    defaultState: 'stopped',
+    terminals: [
+      { id: 'ph', type: 'phase_in',  side: 'top' },
+      { id: 'n',  type: 'neutre_in', side: 'bottom' },
+      { id: 'up', type: 'signal_out', side: 'left' },
+      { id: 'dn', type: 'signal_out', side: 'right' },
+    ],
+    electricLogic: 'blind',
+  },
+
+  point_lumiere: {
+    label: 'Point de lumière',
+    category: 'load',
+    showInMode: 'plan',
+    w: 48, h: 48,
+    states: ['off', 'on'],
+    defaultState: 'off',
+    terminals: [
+      { id: 'ph', type: 'phase_in',  side: 'top' },
+      { id: 'n',  type: 'neutre_in', side: 'bottom' },
+    ],
+    electricLogic: 'ceiling_light',
+  },
+
+  applique: {
+    label: 'Applique murale',
+    category: 'load',
+    showInMode: 'plan',
+    w: 48, h: 48,
+    states: ['off', 'on'],
+    defaultState: 'off',
+    terminals: [
+      { id: 'ph', type: 'phase_in',  side: 'top' },
+      { id: 'n',  type: 'neutre_in', side: 'bottom' },
+    ],
+    electricLogic: 'wall_light',
+  },
+
+  boite_derivation: {
+    label: 'Boîte dérivation',
+    category: 'junction',
+    showInMode: 'plan',
+    w: 52, h: 52,
+    states: ['fixed'],
+    defaultState: 'fixed',
+    terminals: [
+      { id: 'b1', type: 'any', side: 'top' },
+      { id: 'b2', type: 'any', side: 'right' },
+      { id: 'b3', type: 'any', side: 'bottom' },
+      { id: 'b4', type: 'any', side: 'left' },
+    ],
+    electricLogic: 'junction_box',
+  },
+
+  wago: {
+    label: 'Wago 5P',
+    category: 'junction',
+    showInMode: 'plan',
+    w: 64, h: 44,
+    states: ['fixed'],
+    defaultState: 'fixed',
+    terminals: [
+      { id: 'w1', type: 'any', side: 'left' },
+      { id: 'w2', type: 'any', side: 'left' },
+      { id: 'w3', type: 'any', side: 'right' },
+      { id: 'w4', type: 'any', side: 'right' },
+      { id: 'w5', type: 'any', side: 'right' },
+    ],
+    electricLogic: 'wago',
+  },
+
+  // ============================================================
+  // CHARGES SPÉCIALISÉES — plan
+  // ============================================================
+  chauffage: {
+    label: 'Chauffage électrique',
+    category: 'load',
+    showInMode: 'plan',
+    w: 64, h: 52,
+    states: ['off', 'on'],
+    defaultState: 'off',
+    terminals: [
+      { id: 'ph', type: 'phase_in',  side: 'top' },
+      { id: 'n',  type: 'neutre_in', side: 'bottom' },
+      { id: 'pe', type: 'terre',     side: 'right' },
+    ],
+    electricLogic: 'heater',
+  },
+
+  lave_vaisselle: {
+    label: 'Lave-vaisselle',
+    category: 'load',
+    showInMode: 'plan',
+    w: 60, h: 60,
+    states: ['off', 'on'],
+    defaultState: 'off',
+    terminals: [
+      { id: 'ph', type: 'phase_in',  side: 'top' },
+      { id: 'n',  type: 'neutre_in', side: 'bottom' },
+      { id: 'pe', type: 'terre',     side: 'right' },
+    ],
+    electricLogic: 'dishwasher',
+  },
+
+  plaque_cuisson: {
+    label: 'Plaque de cuisson',
+    category: 'load',
+    showInMode: 'plan',
+    w: 64, h: 64,
+    states: ['off', 'on'],
+    defaultState: 'off',
+    terminals: [
+      { id: 'ph', type: 'phase_in',  side: 'top' },
+      { id: 'n',  type: 'neutre_in', side: 'bottom' },
+      { id: 'pe', type: 'terre',     side: 'right' },
+    ],
+    electricLogic: 'hob',
+  },
 };
 
-module.exports = {
-  WIRE_COLORS,
-  WIRE_COLORS_GLOW,
-  COMPONENT_DEFINITIONS,
-};
+export { WIRE_COLORS, WIRE_COLORS_GLOW, COMPONENT_DEFINITIONS };
+export default { WIRE_COLORS, WIRE_COLORS_GLOW, COMPONENT_DEFINITIONS };
