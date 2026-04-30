@@ -2,7 +2,7 @@ import { useRef, useState, useCallback, useEffect } from 'react'
 import { useEditorStore } from '../store/editorStore'
 import { COMPONENT_DEFINITIONS } from '../engine/types'
 import type { Terminal } from '../engine/types'
-import type { WireType } from '../store/types'
+import type { WireType, Component } from '../store/types'
 import ComponentVisual from './ComponentVisual'
 import './Canvas.css'
 
@@ -74,7 +74,7 @@ const TERM_FILL: Record<string, string> = {
 }
 
 const TERM_TO_WIRE: Record<string, WireType> = {
-  phase_in: 'phase', phase_out: 'phase',
+  phase_in: 'marron', phase_out: 'marron',
   neutre_in: 'neutre', neutre_out: 'neutre', neutre_source: 'neutre',
   terre: 'terre', terre_source: 'terre',
   signal_in: 'signal', signal_out: 'signal',
@@ -270,7 +270,7 @@ const Canvas = () => {
         selectElement('component', compId)
         const pos  = getSVGCoords(e)
         const comp = components.get(compId)
-        if (comp) setDrag({ compId, offsetX: pos.x - comp.x, offsetY: pos.y - comp.y })
+        if (comp && !comp.locked) setDrag({ compId, offsetX: pos.x - comp.x, offsetY: pos.y - comp.y })
       }
     },
     [tool, removeComponent, selectElement, getSVGCoords, components]
@@ -360,6 +360,129 @@ const Canvas = () => {
     },
     [getSVGCoords, addComponent]
   )
+
+  // ---- Helper rendu composant (utilisé deux fois : cabinet puis premier plan) ----
+  const renderComp = (compId: string, comp: Component) => {
+    const def = (COMPONENT_DEFINITIONS as any)[comp.typeId]
+    if (!def) return null
+
+    const scale = comp.scale ?? 1
+    const sw    = def.w * scale
+    const sh    = def.h * scale
+
+    const isSelected  = selectedElement?.id === compId
+    const isEnergized = simMode && simResult?.energizedComps.has(compId)
+    const borderColor = isSelected ? '#60a5fa' : isEnergized ? '#10b981' : comp.locked ? '#f59e0b' : '#475569'
+    const borderWidth = isSelected ? 2.5 : 1.5
+    const bgColor     = isEnergized ? '#1a4731' : '#1e293b'
+    const rotation    = comp.rotation ?? 0
+
+    return (
+      <g
+        key={compId}
+        className="comp-group"
+        transform={`translate(${comp.x}, ${comp.y}) rotate(${rotation}, ${sw / 2}, ${sh / 2})`}
+        filter={isEnergized ? 'url(#glow-energized)' : undefined}
+        style={{ cursor: tool === 'select' ? (comp.locked ? 'default' : 'grab') : tool === 'delete' ? 'not-allowed' : 'default' }}
+        onMouseDown={(e) => handleComponentMouseDown(e, compId)}
+        onDoubleClick={(e) => handleComponentDblClick(e, compId)}
+      >
+        <rect
+          width={sw} height={sh}
+          fill={bgColor} stroke={borderColor}
+          strokeWidth={borderWidth} rx="3"
+        />
+        <ComponentVisual
+          typeId={comp.typeId}
+          def={scale === 1 ? def : { ...def, w: sw, h: sh }}
+          state={comp.state}
+          isEnergized={isEnergized}
+        />
+
+        {/* Cadenas — verrou de position */}
+        {(isSelected || comp.locked) && (
+          <g
+            transform={`translate(${sw - 6}, -18)`}
+            style={{ cursor: 'pointer' }}
+            onClick={(e) => { e.stopPropagation(); updateComponent(compId, { locked: !comp.locked }) }}
+          >
+            <circle r="10"
+              fill={comp.locked ? 'rgba(245,158,11,0.25)' : 'rgba(51,65,85,0.6)'}
+              stroke={comp.locked ? '#f59e0b' : '#64748b'} strokeWidth="1.5" />
+            <rect x="-5" y="-1" width="10" height="7" rx="1.5"
+              fill={comp.locked ? '#f59e0b' : '#64748b'} />
+            {comp.locked
+              ? <path d="M -3 -1 A 3 3 0 0 1 3 -1" fill="none" stroke="#f59e0b" strokeWidth="1.5" strokeLinecap="round" />
+              : <path d="M -3 -1 A 3 3 0 0 0 3 -1 V -5" fill="none" stroke="#64748b" strokeWidth="1.5" strokeLinecap="round" />}
+            {comp.locked && <circle cy="3" r="1.2" fill="#92400e" />}
+          </g>
+        )}
+
+        {/* Label — visible seulement si sélectionné */}
+        {isSelected && (
+          <text
+            x={sw / 2} y={sh + 13}
+            textAnchor="middle"
+            fill={isEnergized ? '#6ee7b7' : '#60a5fa'}
+            fontSize="9" fontFamily="monospace"
+            pointerEvents="none"
+          >
+            {comp.label || def.label}{def.electricLogic === 'conduit' ? '  [R=rotation]' : ''}
+          </text>
+        )}
+
+        {/* Bornes */}
+        {(def.terminals as Terminal[]).map((term) => {
+          const { x: tcx, y: tcy } = termPos(term, sw, sh, def.terminals)
+          const isActive = wireStart?.compId === compId && wireStart?.termId === term.id
+          const isSnap   = snapTarget?.compId === compId && snapTarget?.termId === term.id
+          const isGaineT = term.type === 'gaine_slot'
+
+          let lx = tcx, ly = tcy
+          let anchor: 'middle' | 'start' | 'end' = 'middle'
+          if (term.side === 'top')         { ly -= 8 }
+          else if (term.side === 'bottom') { ly += 10 }
+          else if (term.side === 'left')   { lx -= 6; anchor = 'end' }
+          else                             { lx += 6; anchor = 'start' }
+
+          const fill   = isActive ? '#facc15' : (TERM_FILL[term.type] ?? '#94a3b8')
+          const radius = isSnap ? 11 : isActive ? 8 : tool === 'wire' ? (isGaineT ? 8 : 7) : (isGaineT ? 6 : 5)
+
+          return (
+            <g key={term.id} className="term-group">
+              {isSnap && (
+                <circle cx={tcx} cy={tcy} r={18}
+                  fill="none" stroke="#facc15" strokeWidth="1.5"
+                  opacity="0.7" filter="url(#glow-snap)"
+                  pointerEvents="none" />
+              )}
+              <circle
+                cx={tcx} cy={tcy} r={radius}
+                fill={isSnap ? '#facc15' : fill}
+                stroke={isActive || isSnap ? '#92400e' : isGaineT ? '#7e22ce' : '#1e293b'}
+                strokeWidth={isGaineT ? 2 : 1.5}
+                cursor={tool === 'wire' ? 'crosshair' : 'default'}
+                onClick={(e) => handleTerminalClick(e, compId, term.id)}
+                style={{ transition: 'r 0.1s' }}
+              />
+              {isGaineT && !isActive && !isSnap && (
+                <path
+                  d={`M ${tcx} ${tcy - radius * 0.7} L ${tcx + radius * 0.7} ${tcy} L ${tcx} ${tcy + radius * 0.7} L ${tcx - radius * 0.7} ${tcy} Z`}
+                  fill="#a855f7" opacity="0.4" pointerEvents="none" />
+              )}
+              {(tool === 'wire' || isSelected) && (
+                <text x={lx} y={ly} textAnchor={anchor}
+                  fill={isGaineT ? '#c084fc' : '#94a3b8'}
+                  fontSize="7" fontFamily="monospace" pointerEvents="none">
+                  {isGaineT ? 'G' : term.id}
+                </text>
+              )}
+            </g>
+          )
+        })}
+      </g>
+    )
+  }
 
   const isPlan   = mode === 'plan'
   const zoomPct  = Math.round(DEFAULT_VB.w / viewBox.w * 100)
@@ -468,7 +591,15 @@ const Canvas = () => {
           </>
         )}
 
-        {/* ---- Fils ---- */}
+        {/* ---- Composants cabinet (fond — sous les fils) ---- */}
+        {[...components.entries()]
+          .filter(([, c]) => {
+            const lg = (COMPONENT_DEFINITIONS as any)[c.typeId]?.electricLogic
+            return lg === 'cabinet' || lg === 'panel_plan'
+          })
+          .map(([id, c]) => renderComp(id, c))}
+
+        {/* ---- Fils (par-dessus le tableau, sous les composants) ---- */}
         {wires.map((wire) => {
           const fromComp = components.get(wire.fromCompId)
           const toComp   = components.get(wire.toCompId)
@@ -570,134 +701,13 @@ const Canvas = () => {
           )
         })}
 
-        {/* ---- Composants ---- */}
+        {/* ---- Composants premier plan (par-dessus les fils) ---- */}
         {[...components.entries()]
-          .sort(([, a], [, b]) => {
-            const aBack = (COMPONENT_DEFINITIONS as any)[a.typeId]?.electricLogic === 'cabinet' ? -1 : 0
-            const bBack = (COMPONENT_DEFINITIONS as any)[b.typeId]?.electricLogic === 'cabinet' ? -1 : 0
-            return aBack - bBack
+          .filter(([, c]) => {
+            const lg = (COMPONENT_DEFINITIONS as any)[c.typeId]?.electricLogic
+            return lg !== 'cabinet' && lg !== 'panel_plan'
           })
-          .map(([compId, comp]) => {
-            const def = (COMPONENT_DEFINITIONS as any)[comp.typeId]
-            if (!def) return null
-
-            const scale = comp.scale ?? 1
-            const sw    = def.w * scale
-            const sh    = def.h * scale
-
-            const isSelected  = selectedElement?.id === compId
-            const isEnergized = simMode && simResult?.energizedComps.has(compId)
-            const borderColor = isSelected ? '#60a5fa' : isEnergized ? '#10b981' : '#475569'
-            const borderWidth = isSelected ? 2.5 : 1.5
-            const bgColor     = isEnergized ? '#1a4731' : '#1e293b'
-
-            const rotation = comp.rotation ?? 0
-
-            return (
-              <g
-                key={compId}
-                className="comp-group"
-                transform={`translate(${comp.x}, ${comp.y}) rotate(${rotation}, ${sw / 2}, ${sh / 2})`}
-                filter={isEnergized ? 'url(#glow-energized)' : undefined}
-                style={{ cursor: tool === 'select' ? 'grab' : tool === 'delete' ? 'not-allowed' : 'default' }}
-                onMouseDown={(e) => handleComponentMouseDown(e, compId)}
-                onDoubleClick={(e) => handleComponentDblClick(e, compId)}
-              >
-                <rect
-                  width={sw} height={sh}
-                  fill={bgColor} stroke={borderColor}
-                  strokeWidth={borderWidth} rx="3"
-                />
-                <ComponentVisual
-                  typeId={comp.typeId}
-                  def={scale === 1 ? def : { ...def, w: sw, h: sh }}
-                  state={comp.state}
-                  isEnergized={isEnergized}
-                />
-
-                {/* Label — visible seulement si sélectionné */}
-                {isSelected && (
-                  <text
-                    x={sw / 2} y={sh + 13}
-                    textAnchor="middle"
-                    fill={isEnergized ? '#6ee7b7' : '#60a5fa'}
-                    fontSize="9" fontFamily="monospace"
-                    pointerEvents="none"
-                  >
-                    {comp.label || def.label}{def.electricLogic === 'conduit' ? '  [R=rotation]' : ''}
-                  </text>
-                )}
-
-                {/* Bornes */}
-                {(def.terminals as Terminal[]).map((term) => {
-                  const { x: tcx, y: tcy } = termPos(term, sw, sh, def.terminals)
-                  const isActive = wireStart?.compId === compId && wireStart?.termId === term.id
-                  const isSnap   = snapTarget?.compId === compId && snapTarget?.termId === term.id
-                  const isGaineT = term.type === 'gaine_slot'
-
-                  let lx = tcx, ly = tcy
-                  let anchor: 'middle' | 'start' | 'end' = 'middle'
-                  if (term.side === 'top')         { ly -= 8 }
-                  else if (term.side === 'bottom') { ly += 10 }
-                  else if (term.side === 'left')   { lx -= 6; anchor = 'end' }
-                  else                             { lx += 6; anchor = 'start' }
-
-                  const fill   = isActive ? '#facc15' : (TERM_FILL[term.type] ?? '#94a3b8')
-                  const radius = isSnap
-                    ? 11
-                    : isActive
-                      ? 8
-                      : tool === 'wire'
-                        ? (isGaineT ? 8 : 7)
-                        : (isGaineT ? 6 : 5)
-
-                  return (
-                    <g key={term.id} className="term-group">
-                      {/* Halo magnétique */}
-                      {isSnap && (
-                        <circle
-                          cx={tcx} cy={tcy} r={18}
-                          fill="none" stroke="#facc15" strokeWidth="1.5"
-                          opacity="0.7" filter="url(#glow-snap)"
-                          pointerEvents="none"
-                        />
-                      )}
-                      <circle
-                        cx={tcx} cy={tcy}
-                        r={radius}
-                        fill={isSnap ? '#facc15' : fill}
-                        stroke={isActive || isSnap ? '#92400e' : isGaineT ? '#7e22ce' : '#1e293b'}
-                        strokeWidth={isGaineT ? 2 : 1.5}
-                        cursor={tool === 'wire' ? 'crosshair' : 'default'}
-                        onClick={(e) => handleTerminalClick(e, compId, term.id)}
-                        style={{ transition: 'r 0.1s' }}
-                      />
-                      {/* Losange pour gaine_slot */}
-                      {isGaineT && !isActive && !isSnap && (
-                        <path
-                          d={`M ${tcx} ${tcy - radius * 0.7} L ${tcx + radius * 0.7} ${tcy} L ${tcx} ${tcy + radius * 0.7} L ${tcx - radius * 0.7} ${tcy} Z`}
-                          fill="#a855f7" opacity="0.4"
-                          pointerEvents="none"
-                        />
-                      )}
-                      {/* Label borne */}
-                      {(tool === 'wire' || isSelected) && (
-                        <text
-                          x={lx} y={ly}
-                          textAnchor={anchor}
-                          fill={isGaineT ? '#c084fc' : '#94a3b8'}
-                          fontSize="7" fontFamily="monospace"
-                          pointerEvents="none"
-                        >
-                          {isGaineT ? 'G' : term.id}
-                        </text>
-                      )}
-                    </g>
-                  )
-                })}
-              </g>
-            )
-          })}
+          .map(([id, c]) => renderComp(id, c))}
 
         {/* Indicateur snap cible */}
         {snapTarget && tool === 'wire' && !wireStart && (

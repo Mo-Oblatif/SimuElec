@@ -16,6 +16,7 @@ export interface Component {
   label: string
   scale?: number
   rotation?: number
+  locked?: boolean
 }
 
 export type CableSection = '3G1.5' | '3G2.5' | '3G6' | '5G1.5' | '5G2.5' | '5G6'
