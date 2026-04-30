@@ -4,9 +4,10 @@
  */
 
 import { create } from 'zustand'
+import { persist, createJSONStorage } from 'zustand/middleware'
 import { runSimulationService } from '../services/simulationService'
 import { EXERCISES } from '../engine/exercises'
-import type { EditorState, Component, Wire, Notification, WireType, CableSection } from './types'
+import type { EditorState, Component, Wire, Notification, WireType, CableSection, ConductorConnection } from './types'
 
 function generateId(prefix: string): string {
   return `${prefix}-${Math.random().toString(36).substr(2, 9)}`
@@ -20,7 +21,7 @@ function snapshotHistory(state: EditorState) {
   return { history: newHistory, historyIndex: newHistory.length - 1 }
 }
 
-export const useEditorStore = create<EditorState>((set, get) => ({
+export const useEditorStore = create<EditorState>()(persist((set, get) => ({
   // ============================================================
   // ÉTAT DU CIRCUIT
   // ============================================================
@@ -55,7 +56,22 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       const newWires = state.wires.filter(
         (w) => w.fromCompId !== componentId && w.toCompId !== componentId
       )
-      return { components: newComponents, wires: newWires, selectedElement: null, ...hist }
+      // Nettoyer les connexions gaine liées à ce composant
+      const newGaineConnections = new Map(state.gaineConnections)
+      newGaineConnections.delete(componentId)
+      for (const [boxId, conns] of newGaineConnections.entries()) {
+        const filtered = conns.filter(
+          c => c.fromGaineId !== componentId && c.toGaineId !== componentId
+        )
+        if (filtered.length !== conns.length) newGaineConnections.set(boxId, filtered)
+      }
+      return {
+        components: newComponents,
+        wires: newWires,
+        selectedElement: null,
+        gaineConnections: newGaineConnections,
+        ...hist,
+      }
     }),
 
   // ============================================================
@@ -161,7 +177,7 @@ export const useEditorStore = create<EditorState>((set, get) => ({
   // MODE UI
   // ============================================================
   tool: 'select',
-  activeWireType: 'phase' as WireType,
+  activeWireType: 'marron' as WireType,
   lastScale: 1,
   setLastScale: (scale: number) => set({ lastScale: scale }),
   mode: 'sandbox',
@@ -342,4 +358,66 @@ export const useEditorStore = create<EditorState>((set, get) => ({
       history: [],
       historyIndex: -1,
     }),
+
+  // ============================================================
+  // BOÎTE DE DÉRIVATION (Among Us)
+  // ============================================================
+  derivationBoxOpen: null,
+  gaineConnections: new Map(),
+
+  openDerivationBox: (boxId: string) =>
+    set({ derivationBoxOpen: boxId }),
+
+  closeDerivationBox: () =>
+    set({ derivationBoxOpen: null }),
+
+  addGaineConnection: (boxId: string, conn: Omit<ConductorConnection, 'id'>) =>
+    set((state) => {
+      const id = generateId('gc')
+      const existing = state.gaineConnections.get(boxId) ?? []
+      // Supprimer toute connexion existante depuis le même conducteur source
+      const filtered = existing.filter(
+        c => !(c.fromGaineId === conn.fromGaineId && c.fromType === conn.fromType)
+      )
+      const newMap = new Map(state.gaineConnections)
+      newMap.set(boxId, [...filtered, { ...conn, id }])
+      return { gaineConnections: newMap }
+    }),
+
+  removeGaineConnection: (boxId: string, connId: string) =>
+    set((state) => {
+      const existing = state.gaineConnections.get(boxId) ?? []
+      const newMap = new Map(state.gaineConnections)
+      newMap.set(boxId, existing.filter(c => c.id !== connId))
+      return { gaineConnections: newMap }
+    }),
+}),
+{
+  name: 'simuElec-storage',
+  storage: createJSONStorage(() => localStorage),
+  partialize: (state) => ({
+    comps:        Array.from(state.components.entries()),
+    wires:        state.wires,
+    planComps:    Array.from(state._planComponents.entries()),
+    planWires:    state._planWires,
+    schemaComps:  state._schemaSnapshot
+      ? Array.from(state._schemaSnapshot.components.entries())
+      : null,
+    schemaWires:  state._schemaSnapshot?.wires ?? null,
+    gaineConns:   Array.from(state.gaineConnections.entries()),
+    mode:         state.mode,
+  }),
+  merge: (persisted: any, current: EditorState): EditorState => ({
+    ...current,
+    components:       new Map(persisted.comps     ?? []),
+    wires:            persisted.wires             ?? [],
+    _planComponents:  new Map(persisted.planComps ?? []),
+    _planWires:       persisted.planWires         ?? [],
+    _schemaSnapshot:  persisted.schemaComps ? {
+      components: new Map(persisted.schemaComps),
+      wires:      persisted.schemaWires ?? [],
+    } : null,
+    gaineConnections: new Map(persisted.gaineConns ?? []),
+    mode:             persisted.mode ?? 'sandbox',
+  }),
 }))

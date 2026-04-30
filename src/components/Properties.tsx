@@ -264,6 +264,7 @@ const Properties = () => {
             <option value="3G6">3G 6 mm² — cuisson / 32A</option>
             <option value="5G1.5">5G 1,5 mm² — triphasé léger</option>
             <option value="5G2.5">5G 2,5 mm² — triphasé 20A</option>
+            <option value="5G6">5G 6 mm² — triphasé 32A</option>
           </select>
         </div>
 

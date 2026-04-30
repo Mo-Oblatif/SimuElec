@@ -614,6 +614,115 @@ const ComponentVisual = ({ typeId, def, state, isEnergized = false }: Props) => 
       )
     }
 
+    /* ---- conduit (gaine technique) ---- */
+    case 'conduit': {
+      const section = (def as any).section as string | undefined
+      const is5G    = section?.startsWith('5G') ?? false
+      const tubeY   = def.h * 0.15
+      const tubeH   = def.h * 0.7
+      const stripes = is5G ? [
+        { color: '#ef4444' }, // L1 phase
+        { color: '#475569' }, // L2 noir
+        { color: '#9ca3af' }, // L3 gris
+        { color: '#3b82f6' }, // neutre
+        { color: '#22c55e' }, // terre
+      ] : [
+        { color: '#ef4444' }, // phase
+        { color: '#3b82f6' }, // neutre
+        { color: '#22c55e' }, // terre
+      ]
+      const stripeH  = tubeH / (stripes.length + 2)
+      const stripeGap = (tubeH - stripes.length * stripeH) / (stripes.length + 1)
+      return (
+        <>
+          {/* Ombre extérieure */}
+          <rect x={0} y={tubeY + 2} width={def.w} height={tubeH}
+            fill="#1e293b" rx="4" />
+          {/* Corps principal */}
+          <rect x={0} y={tubeY} width={def.w} height={tubeH}
+            fill="#4b5563" stroke="#6b7280" strokeWidth="1" rx="4" />
+          {/* Reflet haut */}
+          <rect x={2} y={tubeY + 2} width={def.w - 4} height={tubeH * 0.25}
+            fill="#9ca3af" rx="2" opacity="0.35" />
+          {/* Conducteurs visibles à gauche */}
+          {stripes.map((s, i) => (
+            <rect key={`l${i}`}
+              x={3} y={tubeY + stripeGap + i * (stripeH + stripeGap)}
+              width={10} height={stripeH}
+              fill={s.color} rx="1.5" opacity="0.9" />
+          ))}
+          {/* Conducteurs visibles à droite */}
+          {stripes.map((s, i) => (
+            <rect key={`r${i}`}
+              x={def.w - 13} y={tubeY + stripeGap + i * (stripeH + stripeGap)}
+              width={10} height={stripeH}
+              fill={s.color} rx="1.5" opacity="0.9" />
+          ))}
+          {/* Section label au centre */}
+          {section && (
+            <text x={def.w / 2} y={def.h / 2 + 3}
+              textAnchor="middle"
+              fill="#e2e8f0" fontSize={Math.min(def.h * 0.38, 10)}
+              fontFamily="monospace" fontWeight="bold"
+              pointerEvents="none">
+              {section}
+            </text>
+          )}
+        </>
+      )
+    }
+
+    /* ---- panel_plan (tableau électrique — vue plan) ---- */
+    case 'panel_plan': {
+      const nRows = 3
+      const rowArea = def.h - 28
+      const rowH    = rowArea / nRows - 3
+      const cols    = 4
+      const colW    = (def.w - 20) / cols
+      return (
+        <>
+          {/* Boîtier extérieur */}
+          <rect x={2} y={2} width={def.w - 4} height={def.h - 4}
+            fill="#0c1a2e" stroke="#334155" strokeWidth="2.5" rx="5" />
+          {/* Porte intérieure */}
+          <rect x={6} y={14} width={def.w - 12} height={def.h - 22}
+            fill="#111827" stroke="#1e3a5f" strokeWidth="1" rx="3" />
+          {/* Rangées de disjoncteurs */}
+          {Array.from({ length: nRows }).map((_, ri) => {
+            const rowY = 17 + ri * (rowH + 3)
+            return (
+              <g key={ri}>
+                {/* Rail DIN */}
+                <rect x={8} y={rowY + rowH * 0.48} width={def.w - 16} height={3}
+                  fill="#334155" rx="0.5" />
+                {/* Disjoncteurs miniatures */}
+                {Array.from({ length: cols }).map((_, ci) => (
+                  <g key={ci}>
+                    <rect
+                      x={9 + ci * colW} y={rowY}
+                      width={colW - 2} height={rowH}
+                      fill="#1e293b" stroke="#475569" strokeWidth="0.5" rx="1.5"
+                    />
+                    <rect
+                      x={10 + ci * colW} y={rowY + rowH * 0.55}
+                      width={colW - 4} height={rowH * 0.28}
+                      fill="#22c55e" opacity="0.7" rx="1"
+                    />
+                  </g>
+                ))}
+              </g>
+            )
+          })}
+          {/* Étiquette */}
+          <rect x={8} y={3} width={def.w - 16} height={10}
+            fill="#1e293b" stroke="#334155" strokeWidth="0.5" rx="1.5" />
+          <text x={cx} y={10} textAnchor="middle"
+            fill="#94a3b8" fontSize="6.5" fontFamily="monospace" fontWeight="bold"
+            pointerEvents="none">TABLEAU</text>
+        </>
+      )
+    }
+
     default:
       return null
   }

@@ -33,7 +33,7 @@ function termPos(
 }
 
 const SCHEMA_CATEGORY_ORDER = ['cabinet', 'protection', 'relay', 'busbar', 'control']
-const PLAN_CATEGORY_ORDER   = ['load', 'control', 'junction']
+const PLAN_CATEGORY_ORDER   = ['cabinet', 'load', 'control', 'junction']
 
 const CATEGORY_LABELS: Record<string, string> = {
   cabinet:    'Armoire / Tableau',
@@ -43,6 +43,7 @@ const CATEGORY_LABELS: Record<string, string> = {
   relay:      'Relais',
   control:    'Commandes',
   junction:   'Jonctions',
+  conduit:    'Gaines / Conduits',
 }
 
 const WIRE_TYPES: Array<{ value: WireType; label: string; color: string }> = [
