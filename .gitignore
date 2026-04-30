@@ -2,5 +2,5 @@
 /PROJECT_CONTEXT.md
 /REFACTORING_SUMMARY.md
 /PROGRESS.md
-/node_modules/
-/dist/
+/node_modules
+/dist
