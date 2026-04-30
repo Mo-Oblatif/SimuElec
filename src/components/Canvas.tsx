@@ -83,10 +83,13 @@ const TERM_TO_WIRE: Record<string, WireType> = {
 type ViewBox = { x: number; y: number; w: number; h: number }
 const DEFAULT_VB: ViewBox = { x: 0, y: 0, w: 1600, h: 900 }
 
-interface DragState  { compId: string; offsetX: number; offsetY: number }
-interface WireStart  { compId: string; termId: string; x: number; y: number }
-interface PanStart   { mx: number; my: number; origX: number; origY: number; origW: number; origH: number }
-interface SnapTarget { compId: string; termId: string; x: number; y: number }
+interface DragState    { compId: string; offsetX: number; offsetY: number }
+interface WireStart    { compId: string; termId: string; x: number; y: number }
+interface PanStart     { mx: number; my: number; origX: number; origY: number; origW: number; origH: number }
+interface SnapTarget   { compId: string; termId: string; x: number; y: number }
+interface PlanResize   { startX: number; startY: number; startW: number; startH: number; mode: 'both' | 'w' | 'h' }
+
+const PLAN_OX = 50, PLAN_OY = 50  // origine du rectangle plan
 
 const SNAP_RADIUS = 28  // SVG units — rayon magnétique des bornes
 
@@ -101,7 +104,7 @@ const Canvas = () => {
     simMode, simResult, tool, activeWireType, mode,
     addComponent, addWire, selectElement, deselectElement,
     removeComponent, removeWire, updateComponent, setActiveWireType,
-    openDerivationBox, planWidth, planHeight,
+    openDerivationBox, planWidth, planHeight, setPlanSize,
   } = useEditorStore()
 
   const [mousePos,   setMousePos]   = useState({ x: 0, y: 0 })
@@ -109,6 +112,7 @@ const Canvas = () => {
   const [drag,       setDrag]       = useState<DragState | null>(null)
   const [panStart,   setPanStart]   = useState<PanStart | null>(null)
   const [snapTarget, setSnapTarget] = useState<SnapTarget | null>(null)
+  const [planResize, setPlanResize] = useState<PlanResize | null>(null)
 
   // Touche R : rotation 90° de la gaine/composant sélectionné
   useEffect(() => {
@@ -189,6 +193,16 @@ const Canvas = () => {
       const pos = getSVGCoords(e)
       setMousePos(pos)
 
+      // Redimensionnement du plan d'installation
+      if (planResize) {
+        const dx = pos.x - planResize.startX
+        const dy = pos.y - planResize.startY
+        const nw = planResize.mode !== 'h' ? planResize.startW + dx : planResize.startW
+        const nh = planResize.mode !== 'w' ? planResize.startH + dy : planResize.startH
+        setPlanSize(nw, nh)
+        return
+      }
+
       if (drag && tool === 'select') {
         updateComponent(drag.compId, {
           x: pos.x - drag.offsetX,
@@ -223,11 +237,12 @@ const Canvas = () => {
         setSnapTarget(null)
       }
     },
-    [drag, tool, getSVGCoords, updateComponent, panStart, components, snapTarget]
+    [drag, tool, getSVGCoords, updateComponent, panStart, components, snapTarget, planResize, setPlanSize]
   )
 
   const handleMouseUp = useCallback((e: React.MouseEvent) => {
     setDrag(null)
+    setPlanResize(null)
     if (e.button === 1) setPanStart(null)
   }, [])
 
@@ -348,13 +363,15 @@ const Canvas = () => {
 
   const isPlan   = mode === 'plan'
   const zoomPct  = Math.round(DEFAULT_VB.w / viewBox.w * 100)
-  const cursor   = panStart
-    ? 'grabbing'
-    : tool === 'wire'
-      ? 'crosshair'
-      : tool === 'delete'
-        ? 'not-allowed'
-        : 'default'
+  const cursor   = planResize
+    ? (planResize.mode === 'w' ? 'ew-resize' : planResize.mode === 'h' ? 'ns-resize' : 'nwse-resize')
+    : panStart
+      ? 'grabbing'
+      : tool === 'wire'
+        ? 'crosshair'
+        : tool === 'delete'
+          ? 'not-allowed'
+          : 'default'
 
   // Position finale du fil preview (snappée ou curseur)
   const previewEnd = snapTarget
@@ -400,10 +417,49 @@ const Canvas = () => {
           <>
             <rect x="-10000" y="-10000" width="30000" height="30000" fill="#06111f" />
             <rect x="-10000" y="-10000" width="30000" height="30000" fill="url(#plan-grid)" />
-            <rect x={50} y={50} width={planWidth} height={planHeight}
+            <rect x={PLAN_OX} y={PLAN_OY} width={planWidth} height={planHeight}
               fill="none" stroke="#1d4ed8" strokeWidth="2" rx="6" strokeDasharray="10,5" />
-            <text x={62} y={78} fill="#1d4ed8" fontSize="13" fontFamily="monospace"
-              fontWeight="600" opacity="0.7">Plan d'installation — {planWidth}×{planHeight}</text>
+            <text x={PLAN_OX + 12} y={PLAN_OY + 28} fill="#1d4ed8" fontSize="13"
+              fontFamily="monospace" fontWeight="600" opacity="0.7">
+              Plan d'installation — {planWidth}×{planHeight}
+            </text>
+
+            {/* Poignée coin bas-droit (W+H) */}
+            <g style={{ cursor: 'nwse-resize' }}
+              onMouseDown={(e) => { e.stopPropagation(); const p = getSVGCoords(e); setPlanResize({ startX: p.x, startY: p.y, startW: planWidth, startH: planHeight, mode: 'both' }) }}>
+              <rect x={PLAN_OX + planWidth - 18} y={PLAN_OY + planHeight - 18} width={36} height={36}
+                fill="rgba(29,78,216,0.15)" stroke="#1d4ed8" strokeWidth="1.5" rx="5" />
+              <line x1={PLAN_OX + planWidth - 11} y1={PLAN_OY + planHeight - 3} x2={PLAN_OX + planWidth - 3} y2={PLAN_OY + planHeight - 11}
+                stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" />
+              <line x1={PLAN_OX + planWidth - 7} y1={PLAN_OY + planHeight - 3} x2={PLAN_OX + planWidth - 3} y2={PLAN_OY + planHeight - 7}
+                stroke="#3b82f6" strokeWidth="1.5" strokeLinecap="round" opacity="0.7" />
+            </g>
+
+            {/* Poignée bord droit (W seul) */}
+            <g style={{ cursor: 'ew-resize' }}
+              onMouseDown={(e) => { e.stopPropagation(); const p = getSVGCoords(e); setPlanResize({ startX: p.x, startY: p.y, startW: planWidth, startH: planHeight, mode: 'w' }) }}>
+              <rect x={PLAN_OX + planWidth - 14} y={PLAN_OY + planHeight / 2 - 22} width={28} height={44}
+                fill="rgba(29,78,216,0.1)" stroke="#1d4ed8" strokeWidth="1" rx="4" />
+              <line x1={PLAN_OX + planWidth - 4} y1={PLAN_OY + planHeight / 2 - 8} x2={PLAN_OX + planWidth - 4} y2={PLAN_OY + planHeight / 2 + 8}
+                stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" />
+              <line x1={PLAN_OX + planWidth - 4} y1={PLAN_OY + planHeight / 2 - 4} x2={PLAN_OX + planWidth + 4} y2={PLAN_OY + planHeight / 2}
+                stroke="#1d4ed8" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1={PLAN_OX + planWidth - 4} y1={PLAN_OY + planHeight / 2 + 4} x2={PLAN_OX + planWidth + 4} y2={PLAN_OY + planHeight / 2}
+                stroke="#1d4ed8" strokeWidth="1.5" strokeLinecap="round" />
+            </g>
+
+            {/* Poignée bord bas (H seul) */}
+            <g style={{ cursor: 'ns-resize' }}
+              onMouseDown={(e) => { e.stopPropagation(); const p = getSVGCoords(e); setPlanResize({ startX: p.x, startY: p.y, startW: planWidth, startH: planHeight, mode: 'h' }) }}>
+              <rect x={PLAN_OX + planWidth / 2 - 22} y={PLAN_OY + planHeight - 14} width={44} height={28}
+                fill="rgba(29,78,216,0.1)" stroke="#1d4ed8" strokeWidth="1" rx="4" />
+              <line x1={PLAN_OX + planWidth / 2 - 8} y1={PLAN_OY + planHeight - 4} x2={PLAN_OX + planWidth / 2 + 8} y2={PLAN_OY + planHeight - 4}
+                stroke="#1d4ed8" strokeWidth="2" strokeLinecap="round" />
+              <line x1={PLAN_OX + planWidth / 2 - 4} y1={PLAN_OY + planHeight - 4} x2={PLAN_OX + planWidth / 2} y2={PLAN_OY + planHeight + 4}
+                stroke="#1d4ed8" strokeWidth="1.5" strokeLinecap="round" />
+              <line x1={PLAN_OX + planWidth / 2 + 4} y1={PLAN_OY + planHeight - 4} x2={PLAN_OX + planWidth / 2} y2={PLAN_OY + planHeight + 4}
+                stroke="#1d4ed8" strokeWidth="1.5" strokeLinecap="round" />
+            </g>
           </>
         ) : (
           <>

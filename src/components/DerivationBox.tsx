@@ -11,7 +11,7 @@ interface SelectedConductor {
 }
 
 const COND_COLOR: Record<CondType, string> = {
-  phase:  '#ef4444',
+  phase:  '#92400e',
   neutre: '#3b82f6',
   terre:  '#22c55e',
   noir:   '#64748b',
@@ -111,11 +111,14 @@ const DerivationBox = () => {
         const boxTerm   = boxDef?.terminals.find((t: any) => t.id === boxTermId)
         const gaineComp = components.get(gaineId)
         const gaineDef  = gaineComp ? (COMPONENT_DEFINITIONS as any)[gaineComp.typeId] : null
-        const section   = gaineDef?.section as string || '3G1.5'
+        // Priorité : section du fil > section de la définition du composant > défaut 3G1.5
+        const section   = (w.section as string) || (gaineDef?.section as string) || '3G1.5'
+        const compLabel = gaineComp?.label || gaineDef?.label || ''
+        const label     = compLabel || 'Gaine'
         return {
           gaineId,
           side:       (boxTerm?.side ?? 'top') as string,
-          label:      gaineComp?.label || gaineDef?.label || 'Gaine',
+          label,
           section,
           conductors: getConductors(section),
         }
