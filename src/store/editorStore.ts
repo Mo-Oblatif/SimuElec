@@ -231,6 +231,11 @@ export const useEditorStore = create<EditorState>()(persist((set, get) => ({
   setZoom: (zoom: number) => set({ zoom }),
   setPan: (x: number, y: number) => set({ panX: x, panY: y }),
 
+  // ---- Plan d'installation ----
+  planWidth: 1500,
+  planHeight: 800,
+  setPlanSize: (w: number, h: number) => set({ planWidth: Math.max(400, w), planHeight: Math.max(200, h) }),
+
   // ============================================================
   // NOTIFICATIONS
   // ============================================================
@@ -406,6 +411,8 @@ export const useEditorStore = create<EditorState>()(persist((set, get) => ({
     schemaWires:  state._schemaSnapshot?.wires ?? null,
     gaineConns:   Array.from(state.gaineConnections.entries()),
     mode:         state.mode,
+    planWidth:    state.planWidth,
+    planHeight:   state.planHeight,
   }),
   merge: (persisted: any, current: EditorState): EditorState => ({
     ...current,
@@ -419,5 +426,7 @@ export const useEditorStore = create<EditorState>()(persist((set, get) => ({
     } : null,
     gaineConnections: new Map(persisted.gaineConns ?? []),
     mode:             persisted.mode ?? 'sandbox',
+    planWidth:        persisted.planWidth  ?? 1500,
+    planHeight:       persisted.planHeight ?? 800,
   }),
 }))

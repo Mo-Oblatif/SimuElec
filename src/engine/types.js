@@ -55,7 +55,7 @@ const COMPONENT_DEFINITIONS = {
     label: 'Armoire tableau',
     category: 'cabinet',
     showInMode: 'schema',
-    w: 480, h: 640,
+    w: 480, h: 720,
     states: ['fixed'],
     defaultState: 'fixed',
     terminals: [

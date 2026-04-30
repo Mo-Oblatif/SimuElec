@@ -101,7 +101,7 @@ const Canvas = () => {
     simMode, simResult, tool, activeWireType, mode,
     addComponent, addWire, selectElement, deselectElement,
     removeComponent, removeWire, updateComponent, setActiveWireType,
-    openDerivationBox,
+    openDerivationBox, planWidth, planHeight,
   } = useEditorStore()
 
   const [mousePos,   setMousePos]   = useState({ x: 0, y: 0 })
@@ -400,10 +400,10 @@ const Canvas = () => {
           <>
             <rect x="-10000" y="-10000" width="30000" height="30000" fill="#06111f" />
             <rect x="-10000" y="-10000" width="30000" height="30000" fill="url(#plan-grid)" />
-            <rect x="50" y="50" width="1500" height="800"
+            <rect x={50} y={50} width={planWidth} height={planHeight}
               fill="none" stroke="#1d4ed8" strokeWidth="2" rx="6" strokeDasharray="10,5" />
-            <text x="62" y="78" fill="#1d4ed8" fontSize="13" fontFamily="monospace"
-              fontWeight="600" opacity="0.7">Plan d'installation</text>
+            <text x={62} y={78} fill="#1d4ed8" fontSize="13" fontFamily="monospace"
+              fontWeight="600" opacity="0.7">Plan d'installation — {planWidth}×{planHeight}</text>
           </>
         ) : (
           <>

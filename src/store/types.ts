@@ -122,6 +122,11 @@ export interface EditorState {
   setZoom: (zoom: number) => void
   setPan: (x: number, y: number) => void
 
+  // ---- Plan d'installation ----
+  planWidth: number
+  planHeight: number
+  setPlanSize: (w: number, h: number) => void
+
   // ---- Notifications ----
   notifications: Notification[]
   addNotification: (

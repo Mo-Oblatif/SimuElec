@@ -584,32 +584,37 @@ const ComponentVisual = ({ typeId, def, state, isEnergized = false }: Props) => 
 
     /* ---- cabinet (armoire / tableau électrique) ---- */
     case 'cabinet': {
-      const railY1 = def.h * 0.20
-      const railY2 = def.h * 0.50
-      const railY3 = def.h * 0.80
+      const rails = [def.h * 0.16, def.h * 0.38, def.h * 0.60, def.h * 0.82]
       return (
         <>
           {/* Outer enclosure */}
           <rect x={2} y={2} width={def.w - 4} height={def.h - 4}
-            fill="#0f172a" stroke="#334155" strokeWidth="3" rx="6" />
+            fill="#0f172a" stroke="#475569" strokeWidth="3.5" rx="6" />
           {/* Inner door area */}
           <rect x={10} y={10} width={def.w - 20} height={def.h - 20}
-            fill="#111827" stroke="#1e3a5f" strokeWidth="1.5" rx="4" />
-          {/* DIN rails */}
-          {[railY1, railY2, railY3].map((ry, i) => (
+            fill="#111827" stroke="#1e3a5f" strokeWidth="2" rx="4" />
+          {/* DIN rails — 4 rangées */}
+          {rails.map((ry, i) => (
             <g key={i}>
-              <rect x={18} y={ry - 4} width={def.w - 36} height={8}
-                fill="#1e293b" stroke="#475569" strokeWidth="1" rx="1" />
-              <rect x={18} y={ry - 2} width={def.w - 36} height={4}
-                fill="#334155" rx="0.5" />
+              {/* Rail support (fond) */}
+              <rect x={14} y={ry - 7} width={def.w - 28} height={14}
+                fill="#1a2236" stroke="#374151" strokeWidth="1" rx="2" />
+              {/* Rail DIN (métal) */}
+              <rect x={14} y={ry - 5} width={def.w - 28} height={10}
+                fill="#1e293b" stroke="#4b5563" strokeWidth="1.5" rx="1.5" />
+              {/* Reflet / ligne centrale */}
+              <rect x={14} y={ry - 2} width={def.w - 28} height={4}
+                fill="#334155" rx="1" />
+              <line x1={16} y1={ry} x2={def.w - 16} y2={ry}
+                stroke="#6b7280" strokeWidth="0.8" opacity="0.6" />
             </g>
           ))}
           {/* Label plate */}
-          <rect x={def.w * 0.25} y={def.h * 0.03} width={def.w * 0.5} height={def.h * 0.07}
-            fill="#1e293b" stroke="#475569" strokeWidth="1" rx="2" />
-          <text x={cx} y={def.h * 0.075} textAnchor="middle"
-            fill="#94a3b8" fontSize={def.h * 0.045} fontFamily="monospace" fontWeight="bold"
-            pointerEvents="none">TABLEAU</text>
+          <rect x={def.w * 0.22} y={def.h * 0.025} width={def.w * 0.56} height={def.h * 0.065}
+            fill="#1e293b" stroke="#334155" strokeWidth="1" rx="2" />
+          <text x={cx} y={def.h * 0.065} textAnchor="middle"
+            fill="#94a3b8" fontSize={def.h * 0.038} fontFamily="monospace" fontWeight="bold"
+            pointerEvents="none">TABLEAU ÉLEC.</text>
         </>
       )
     }
