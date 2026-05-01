@@ -6,6 +6,7 @@ import Properties from './components/Properties'
 import ExercisePanel from './components/ExercisePanel'
 import ExerciseSelector from './components/ExerciseSelector'
 import Notifications from './components/Notifications'
+import DerivationBox from './components/DerivationBox'
 import './App.css'
 
 function App() {
@@ -18,6 +19,8 @@ function App() {
     components, wires,
     exportJSON, importJSON,
     showExerciseSelector, openExerciseSelector,
+    derivationBoxOpen,
+    planWidth, planHeight, setPlanSize,
   } = useEditorStore()
 
   const handleSimulate = () => {
@@ -162,10 +165,27 @@ function App() {
             </div>
 
             {isPlan && (
-              <div className="tool-group" style={{ marginLeft: 'auto' }}>
-                <span style={{ fontSize: 10, color: 'var(--text-dim)', fontStyle: 'italic' }}>
-                  Mode Plan d'installation
-                </span>
+              <div className="tool-group" style={{ marginLeft: 'auto', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>Plan :</span>
+                <input
+                  type="number"
+                  value={planWidth}
+                  min={400} max={6000} step={50}
+                  onChange={e => setPlanSize(Number(e.target.value) || planWidth, planHeight)}
+                  style={{ width: 64, fontSize: 10, background: '#1e293b', color: '#cbd5e1',
+                    border: '1px solid #334155', borderRadius: 4, padding: '2px 4px' }}
+                  title="Largeur du plan (px)"
+                />
+                <span style={{ fontSize: 10, color: 'var(--text-dim)' }}>×</span>
+                <input
+                  type="number"
+                  value={planHeight}
+                  min={200} max={4000} step={50}
+                  onChange={e => setPlanSize(planWidth, Number(e.target.value) || planHeight)}
+                  style={{ width: 64, fontSize: 10, background: '#1e293b', color: '#cbd5e1',
+                    border: '1px solid #334155', borderRadius: 4, padding: '2px 4px' }}
+                  title="Hauteur du plan (px)"
+                />
               </div>
             )}
 
@@ -188,6 +208,9 @@ function App() {
 
       {/* Exercise selector modal */}
       {showExerciseSelector && <ExerciseSelector />}
+
+      {/* Boîte de dérivation — Among Us */}
+      {derivationBoxOpen && <DerivationBox />}
 
       <Notifications />
     </div>

@@ -15,9 +15,11 @@ export interface Component {
   state: string
   label: string
   scale?: number
+  rotation?: number
+  locked?: boolean
 }
 
-export type CableSection = '3G1.5' | '3G2.5' | '3G6' | '5G1.5' | '5G2.5'
+export type CableSection = '3G1.5' | '3G2.5' | '3G6' | '5G1.5' | '5G2.5' | '5G6'
 
 export interface Wire {
   id: string
@@ -27,6 +29,15 @@ export interface Wire {
   toTermId: string
   type: WireType
   section?: CableSection
+}
+
+/** Connexion entre deux conducteurs à l'intérieur d'une boîte de dérivation */
+export interface ConductorConnection {
+  id: string
+  fromGaineId: string
+  fromType: 'phase' | 'neutre' | 'terre' | 'noir' | 'gris'
+  toGaineId: string
+  toType: 'phase' | 'neutre' | 'terre' | 'noir' | 'gris'
 }
 
 export interface SimulationResult {
@@ -112,6 +123,11 @@ export interface EditorState {
   setZoom: (zoom: number) => void
   setPan: (x: number, y: number) => void
 
+  // ---- Plan d'installation ----
+  planWidth: number
+  planHeight: number
+  setPlanSize: (w: number, h: number) => void
+
   // ---- Notifications ----
   notifications: Notification[]
   addNotification: (
@@ -137,4 +153,12 @@ export interface EditorState {
   exportJSON: () => { components: Component[]; wires: Wire[] }
   importJSON: (data: { components: Component[]; wires: Wire[] }) => void
   clear: () => void
+
+  // ---- Boîte de dérivation (Among Us) ----
+  derivationBoxOpen: string | null
+  gaineConnections: Map<string, ConductorConnection[]>
+  openDerivationBox: (boxId: string) => void
+  closeDerivationBox: () => void
+  addGaineConnection: (boxId: string, conn: Omit<ConductorConnection, 'id'>) => void
+  removeGaineConnection: (boxId: string, connId: string) => void
 }

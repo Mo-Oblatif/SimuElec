@@ -1,0 +1,143 @@
+.deriv-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.72);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.deriv-modal {
+  background: #0f1e30;
+  border: 1.5px solid #1e3a5f;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  max-width: 760px;
+  width: 95vw;
+  box-shadow:
+    0 0 60px rgba(59, 130, 246, 0.15),
+    0 20px 60px rgba(0, 0, 0, 0.6);
+}
+
+.deriv-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 16px 10px;
+  border-bottom: 1px solid #1e3a5f;
+}
+
+.deriv-title {
+  font-family: monospace;
+  font-size: 12px;
+  font-weight: 700;
+  color: #60a5fa;
+  letter-spacing: 0.04em;
+  flex: 1;
+}
+
+.deriv-status {
+  font-size: 11px;
+  font-family: monospace;
+}
+
+.deriv-hint {
+  color: #64748b;
+  font-style: italic;
+}
+
+.deriv-ok {
+  color: #22c55e;
+  font-weight: 700;
+}
+
+.deriv-warn {
+  color: #f59e0b;
+  font-weight: 700;
+}
+
+.deriv-close {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 14px;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: color 0.15s, background 0.15s;
+}
+.deriv-close:hover {
+  color: #f87171;
+  background: rgba(248, 113, 113, 0.1);
+}
+
+.deriv-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  margin: 0 auto;
+  padding: 4px 8px;
+}
+
+.deriv-empty {
+  padding: 32px;
+  text-align: center;
+  color: #475569;
+  font-family: monospace;
+  font-size: 12px;
+  line-height: 1.8;
+}
+.deriv-empty strong {
+  color: #a855f7;
+}
+
+.cond-circle {
+  transition: opacity 0.1s;
+}
+.cond-circle:hover circle {
+  filter: brightness(1.25);
+}
+
+.deriv-legend {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 10px 16px 12px;
+  border-top: 1px solid #1e3a5f;
+  flex-wrap: wrap;
+}
+
+.deriv-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 10px;
+  font-family: monospace;
+  color: #94a3b8;
+}
+
+.deriv-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.deriv-clear {
+  margin-left: auto;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #f87171;
+  font-size: 10px;
+  font-family: monospace;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 4px;
+  transition: background 0.15s;
+}
+.deriv-clear:hover {
+  background: rgba(239, 68, 68, 0.2);
+}
