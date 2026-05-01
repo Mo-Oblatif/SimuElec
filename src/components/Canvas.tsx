@@ -599,7 +599,15 @@ const Canvas = () => {
           })
           .map(([id, c]) => renderComp(id, c))}
 
-        {/* ---- Fils (par-dessus le tableau, sous les composants) ---- */}
+        {/* ---- Composants premier plan (sous les fils) ---- */}
+        {[...components.entries()]
+          .filter(([, c]) => {
+            const lg = (COMPONENT_DEFINITIONS as any)[c.typeId]?.electricLogic
+            return lg !== 'cabinet' && lg !== 'panel_plan'
+          })
+          .map(([id, c]) => renderComp(id, c))}
+
+        {/* ---- Fils (par-dessus les composants) ---- */}
         {wires.map((wire) => {
           const fromComp = components.get(wire.fromCompId)
           const toComp   = components.get(wire.toCompId)
@@ -700,14 +708,6 @@ const Canvas = () => {
             </g>
           )
         })}
-
-        {/* ---- Composants premier plan (par-dessus les fils) ---- */}
-        {[...components.entries()]
-          .filter(([, c]) => {
-            const lg = (COMPONENT_DEFINITIONS as any)[c.typeId]?.electricLogic
-            return lg !== 'cabinet' && lg !== 'panel_plan'
-          })
-          .map(([id, c]) => renderComp(id, c))}
 
         {/* Indicateur snap cible */}
         {snapTarget && tool === 'wire' && !wireStart && (

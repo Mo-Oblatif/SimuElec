@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useRef, useEffect } from 'react'
 import { useEditorStore } from '../store/editorStore'
 import { COMPONENT_DEFINITIONS } from '../engine/types'
 import './DerivationBox.css'
@@ -33,7 +33,7 @@ function getConductors(section: string): CondType[] {
 }
 
 // ---- Layout SVG ----
-const CX = 260, CY = 240, R_BOX = 120
+const CX = 350, CY = 270, R_BOX = 120
 const EXT_DIST   = R_BOX + 52   // centre → extrémité du tube
 const SIDE_GAP   = 60           // écart entre 2 gaines sur le même côté
 
@@ -88,9 +88,20 @@ const DerivationBox = () => {
     derivationBoxOpen, closeDerivationBox,
     components, wires,
     gaineConnections, addGaineConnection, removeGaineConnection,
+    updateComponent,
   } = useEditorStore()
 
   const [selected, setSelected] = useState<SelectedConductor | null>(null)
+  const [editingGaineId, setEditingGaineId] = useState<string | null>(null)
+  const [editLabel, setEditLabel] = useState('')
+  const editInputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (editingGaineId && editInputRef.current) {
+      editInputRef.current.focus()
+      editInputRef.current.select()
+    }
+  }, [editingGaineId])
 
   const boxId = derivationBoxOpen
   if (!boxId) return null
@@ -105,18 +116,22 @@ const DerivationBox = () => {
         return false
       })
       .map(w => {
-        const isFromBox = w.fromCompId === boxId
-        const gaineId   = isFromBox ? w.toCompId   : w.fromCompId
-        const boxTermId = isFromBox ? w.fromTermId  : w.toTermId
-        const boxTerm   = boxDef?.terminals.find((t: any) => t.id === boxTermId)
-        const gaineComp = components.get(gaineId)
-        const gaineDef  = gaineComp ? (COMPONENT_DEFINITIONS as any)[gaineComp.typeId] : null
+        const isFromBox  = w.fromCompId === boxId
+        // Utiliser l'ID du fil comme identifiant unique de la gaine
+        // (un même composant peut avoir plusieurs gaines vers la boîte)
+        const gaineId    = w.id
+        const gaineCompId = isFromBox ? w.toCompId : w.fromCompId
+        const boxTermId  = isFromBox ? w.fromTermId : w.toTermId
+        const boxTerm    = boxDef?.terminals.find((t: any) => t.id === boxTermId)
+        const gaineComp  = components.get(gaineCompId)
+        const gaineDef   = gaineComp ? (COMPONENT_DEFINITIONS as any)[gaineComp.typeId] : null
         // Priorité : section du fil > section de la définition du composant > défaut 3G1.5
-        const section   = (w.section as string) || (gaineDef?.section as string) || '3G1.5'
-        const compLabel = gaineComp?.label || gaineDef?.label || ''
-        const label     = compLabel || 'Gaine'
+        const section    = (w.section as string) || (gaineDef?.section as string) || '3G1.5'
+        const compLabel  = gaineComp?.label || gaineDef?.label || ''
+        const label      = compLabel || 'Gaine'
         return {
           gaineId,
+          gaineCompId,
           side:       (boxTerm?.side ?? 'top') as string,
           label,
           section,
@@ -141,6 +156,15 @@ const DerivationBox = () => {
   }, [boxId, wires, components, boxDef])
 
   const connections = gaineConnections.get(boxId) ?? []
+
+  const commitRename = () => {
+    if (!editingGaineId) return
+    const gaine = connectedGaines.find(g => g.gaineId === editingGaineId)
+    if (gaine && editLabel.trim()) {
+      updateComponent(gaine.gaineCompId, { label: editLabel.trim() })
+    }
+    setEditingGaineId(null)
+  }
 
   const handleConductorClick = (gaineId: string, type: CondType) => {
     if (!selected) {
@@ -208,7 +232,7 @@ const DerivationBox = () => {
             </p>
           </div>
         ) : (
-          <svg className="deriv-svg" viewBox="0 0 520 480" width="520" height="480">
+          <svg className="deriv-svg" viewBox="0 0 700 540">
             <defs>
               <radialGradient id="box-bg" cx="50%" cy="50%">
                 <stop offset="0%"   stopColor="#1e3a5f" />
@@ -266,6 +290,30 @@ const DerivationBox = () => {
               const edge    = boxEdgeDir(gaine.ex, gaine.ey)
               const isHoriz = gaine.side === 'top' || gaine.side === 'bottom'
               const total   = gaine.conductors.length
+              const isEditing = editingGaineId === gaine.gaineId
+
+              // Positions du label et du bouton renommer
+              const labelX = isHoriz
+                ? gaine.ex
+                : gaine.ex + (gaine.side === 'left' ? -12 : 12)
+              const labelY = isHoriz
+                ? gaine.ey + (gaine.side === 'top' ? -22 : 24)
+                : gaine.ey
+              const labelAnchor: 'middle' | 'start' | 'end' = isHoriz
+                ? 'middle'
+                : gaine.side === 'left' ? 'end' : 'start'
+
+              // Position foreignObject pour l'input de renommage
+              const foW = 130
+              const foH = 22
+              const foX = isHoriz
+                ? gaine.ex - foW / 2
+                : gaine.side === 'left'
+                  ? gaine.ex - 14 - foW
+                  : gaine.ex + 14
+              const foY = isHoriz
+                ? gaine.ey + (gaine.side === 'top' ? -22 - foH + 2 : 14)
+                : gaine.ey - foH / 2
 
               return (
                 <g key={gaine.gaineId}>
@@ -275,19 +323,72 @@ const DerivationBox = () => {
                   <line x1={edge.x} y1={edge.y} x2={gaine.ex} y2={gaine.ey}
                     stroke="#374151" strokeWidth="12" strokeLinecap="round" />
 
-                  {/* Label gaine */}
-                  <text
-                    x={isHoriz
-                      ? gaine.ex
-                      : gaine.ex + (gaine.side === 'left' ? -10 : 10)}
-                    y={isHoriz
-                      ? gaine.ey + (gaine.side === 'top' ? -18 : 20)
-                      : gaine.ey}
-                    textAnchor={isHoriz ? 'middle' : gaine.side === 'left' ? 'end' : 'start'}
-                    fill="#94a3b8" fontSize="8.5" fontFamily="monospace"
-                  >
-                    {gaine.label} · {gaine.section}
-                  </text>
+                  {/* Label gaine — clic pour renommer */}
+                  {isEditing ? (
+                    <foreignObject x={foX} y={foY} width={foW} height={foH}>
+                      {/* @ts-ignore */}
+                      <input
+                        ref={editInputRef}
+                        type="text"
+                        value={editLabel}
+                        onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+                          setEditLabel(e.target.value)
+                        }
+                        onBlur={commitRename}
+                        onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
+                          if (e.key === 'Enter') { e.stopPropagation(); commitRename() }
+                          if (e.key === 'Escape') { e.stopPropagation(); setEditingGaineId(null) }
+                        }}
+                        style={{
+                          width: '100%',
+                          background: '#0f1e30',
+                          color: '#e2e8f0',
+                          border: '1px solid #3b82f6',
+                          borderRadius: '3px',
+                          fontSize: '9px',
+                          padding: '2px 5px',
+                          fontFamily: 'monospace',
+                          outline: 'none',
+                          boxSizing: 'border-box',
+                        }}
+                      />
+                    </foreignObject>
+                  ) : (
+                    <g
+                      style={{ cursor: 'text' }}
+                      onClick={() => {
+                        setEditingGaineId(gaine.gaineId)
+                        setEditLabel(gaine.label)
+                      }}
+                    >
+                      {/* Zone cliquable invisible élargie */}
+                      <rect
+                        x={isHoriz ? gaine.ex - 65 : gaine.side === 'left' ? gaine.ex - 14 - 130 : gaine.ex + 14}
+                        y={labelY - 10}
+                        width={130} height={16}
+                        fill="transparent"
+                      />
+                      <text
+                        x={labelX} y={labelY}
+                        textAnchor={labelAnchor}
+                        fill={isEditing ? '#60a5fa' : '#94a3b8'}
+                        fontSize="8.5" fontFamily="monospace"
+                      >
+                        {gaine.label}
+                      </text>
+                      <text
+                        x={isHoriz
+                          ? gaine.ex + (labelAnchor === 'middle' ? 0 : 0)
+                          : gaine.side === 'left' ? gaine.ex - 12 : gaine.ex + 12}
+                        y={labelY + 11}
+                        textAnchor={labelAnchor}
+                        fill="#475569"
+                        fontSize="7.5" fontFamily="monospace"
+                      >
+                        {gaine.section} · ✎
+                      </text>
+                    </g>
+                  )}
 
                   {/* Conducteurs */}
                   {gaine.conductors.map((ctype, ci) => {
@@ -376,6 +477,7 @@ const DerivationBox = () => {
             <span className="deriv-dot" style={{ background: COND_COLOR.gris, border: '1px solid #475569' }} />
             L3 (gris)
           </span>
+          <span className="deriv-legend-item deriv-hint">✎ cliquer le nom pour renommer</span>
           {connections.length > 0 && (
             <button
               className="deriv-clear"

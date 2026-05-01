@@ -15,8 +15,8 @@
   border-radius: 12px;
   display: flex;
   flex-direction: column;
-  max-width: 560px;
-  width: 100%;
+  max-width: 760px;
+  width: 95vw;
   box-shadow:
     0 0 60px rgba(59, 130, 246, 0.15),
     0 20px 60px rgba(0, 0, 0, 0.6);
@@ -76,8 +76,10 @@
 
 .deriv-svg {
   display: block;
+  width: 100%;
+  height: auto;
   margin: 0 auto;
-  padding: 8px;
+  padding: 4px 8px;
 }
 
 .deriv-empty {

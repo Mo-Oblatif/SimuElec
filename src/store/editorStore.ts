@@ -53,15 +53,22 @@ export const useEditorStore = create<EditorState>()(persist((set, get) => ({
       const hist = snapshotHistory(state)
       const newComponents = new Map(state.components)
       newComponents.delete(componentId)
+      // Fils supprimés (pour nettoyer les connexions gaine par wireId)
+      const removedWireIds = new Set(
+        state.wires
+          .filter(w => w.fromCompId === componentId || w.toCompId === componentId)
+          .map(w => w.id)
+      )
       const newWires = state.wires.filter(
         (w) => w.fromCompId !== componentId && w.toCompId !== componentId
       )
-      // Nettoyer les connexions gaine liées à ce composant
+      // Nettoyer les connexions gaine : par boxId (si la boîte est supprimée)
+      // et par wireId (gaineId = wire.id depuis la refonte)
       const newGaineConnections = new Map(state.gaineConnections)
       newGaineConnections.delete(componentId)
       for (const [boxId, conns] of newGaineConnections.entries()) {
         const filtered = conns.filter(
-          c => c.fromGaineId !== componentId && c.toGaineId !== componentId
+          c => !removedWireIds.has(c.fromGaineId) && !removedWireIds.has(c.toGaineId)
         )
         if (filtered.length !== conns.length) newGaineConnections.set(boxId, filtered)
       }
@@ -97,9 +104,18 @@ export const useEditorStore = create<EditorState>()(persist((set, get) => ({
   removeWire: (wireId: string) =>
     set((state) => {
       const hist = snapshotHistory(state)
+      // Nettoyer les connexions gaine qui référencent ce fil comme gaineId
+      const newGaineConnections = new Map(state.gaineConnections)
+      for (const [boxId, conns] of newGaineConnections.entries()) {
+        const filtered = conns.filter(
+          c => c.fromGaineId !== wireId && c.toGaineId !== wireId
+        )
+        if (filtered.length !== conns.length) newGaineConnections.set(boxId, filtered)
+      }
       return {
         wires: state.wires.filter((w) => w.id !== wireId),
         selectedElement: null,
+        gaineConnections: newGaineConnections,
         ...hist,
       }
     }),
